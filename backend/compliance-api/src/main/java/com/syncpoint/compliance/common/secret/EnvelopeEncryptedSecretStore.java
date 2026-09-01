@@ -1,9 +1,9 @@
 package com.syncpoint.compliance.common.secret;
 
+import com.syncpoint.compliance.config.properties.SecretStoreProperties;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,26 +35,26 @@ public class EnvelopeEncryptedSecretStore implements SecretStore {
     private static final int DEK_BITS = 256;
 
     private final SecretRecordRepository repository;
-    private final String masterKeyBase64;
+    private final SecretStoreProperties properties;
     private final SecureRandom random = new SecureRandom();
     private SecretKey masterKey;
 
     public EnvelopeEncryptedSecretStore(SecretRecordRepository repository,
-                                        @Value("${syncpoint.secrets.master-key:}") String masterKeyBase64) {
+                                        SecretStoreProperties properties) {
         this.repository = repository;
-        this.masterKeyBase64 = masterKeyBase64;
+        this.properties = properties;
     }
 
     @PostConstruct
     void init() {
-        if (masterKeyBase64 == null || masterKeyBase64.isBlank()) {
+        if (!properties.hasMasterKey()) {
             log.warn("SECRET_STORE_MASTER_KEY not set. Generating an ephemeral in-memory master key. "
                     + "Stored secrets WILL NOT survive application restart. This is DEV-ONLY.");
             byte[] bytes = new byte[32];
             random.nextBytes(bytes);
             this.masterKey = new SecretKeySpec(bytes, ALG);
         } else {
-            byte[] bytes = Base64.getDecoder().decode(masterKeyBase64);
+            byte[] bytes = Base64.getDecoder().decode(properties.masterKey());
             if (bytes.length != 32) {
                 throw new IllegalStateException("SECRET_STORE_MASTER_KEY must decode to exactly 32 bytes");
             }

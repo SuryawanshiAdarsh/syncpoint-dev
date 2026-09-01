@@ -18,6 +18,7 @@ import {
   ProviderMeta,
   PROVIDER_CATALOG,
 } from '@ui';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -115,7 +116,7 @@ import {
       <ui-page-header
         eyebrow="Automation"
         title="Integrations"
-        subtitle="Connect the systems your evidence lives in. All credentials are envelope-encrypted and never returned by the API.">
+        [subtitle]="c.integrations.subtitle">
       </ui-page-header>
 
       <div class="providers">
@@ -199,6 +200,7 @@ import {
   `,
 })
 export class IntegrationsComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   readonly catalog: ReadonlyArray<ProviderMeta> = PROVIDER_CATALOG;

@@ -7,11 +7,14 @@ import { Subscription, timer } from 'rxjs';
 
 import { ApiService } from '../../core/api/api.service';
 import { ExportJob } from '../../core/api/api.types';
+import { UiPageHeaderComponent, UiCardComponent, UiEmptyStateComponent } from '@ui';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
   selector: 'app-export',
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatProgressBarModule,
+            UiPageHeaderComponent, UiCardComponent, UiEmptyStateComponent],
   styles: [`
     .hero-card {
       background: linear-gradient(135deg, #0b1220 0%, #1e1b4b 60%, #4c1d95 100%);
@@ -104,55 +107,48 @@ import { ExportJob } from '../../core/api/api.types';
   `],
   template: `
     <div class="page">
-      <div class="page-header">
-        <div>
-          <div class="eyebrow">Delivery</div>
-          <h1>Audit package</h1>
-          <p class="subtitle">Bundle evidence, control mappings, evidence hashes, and audit trail into a single downloadable ZIP for internal review or an auditor conversation.</p>
-        </div>
-      </div>
+      <ui-page-header
+        [eyebrow]="c.export.eyebrow"
+        [title]="c.export.title"
+        [subtitle]="c.export.heroSubtitle">
+      </ui-page-header>
 
       <div class="hero-card">
         <div class="icon-large"><mat-icon>inventory_2</mat-icon></div>
-        <h1>Package everything into one ZIP.</h1>
-        <p>
-          Every evidence artifact, every control mapping, every human review — packaged with sha-256 hashes so the recipient can verify each file. Nothing sensitive (credentials, tokens) is ever included.
-        </p>
+        <h1>{{ c.export.heroHeadline }}</h1>
+        <p>{{ c.export.heroSubtitle }}</p>
 
         <div class="contents">
           <div class="content-tile">
             <mat-icon>description</mat-icon>
-            <div><div class="title">README.txt</div><div class="sub">What's inside</div></div>
+            <div><div class="title">README.txt</div><div class="sub">{{ c.export.contentReadme }}</div></div>
           </div>
           <div class="content-tile">
             <mat-icon>table_chart</mat-icon>
-            <div><div class="title">index.csv</div><div class="sub">Master evidence list</div></div>
+            <div><div class="title">index.csv</div><div class="sub">{{ c.export.contentIndex }}</div></div>
           </div>
           <div class="content-tile">
             <mat-icon>folder</mat-icon>
-            <div><div class="title">controls/</div><div class="sub">Per-control folders</div></div>
+            <div><div class="title">controls/</div><div class="sub">{{ c.export.contentControls }}</div></div>
           </div>
           <div class="content-tile">
             <mat-icon>data_object</mat-icon>
-            <div><div class="title">audit-log.json</div><div class="sub">Event history</div></div>
+            <div><div class="title">audit-log.json</div><div class="sub">{{ c.export.contentAudit }}</div></div>
           </div>
         </div>
 
         <div style="margin-top: 24px;">
           <button class="btn primary" (click)="start()" [disabled]="starting() || (job()?.status === 'RUNNING' || job()?.status === 'QUEUED')" style="background: #fff; color: #4338ca; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <mat-icon>package</mat-icon>
-            {{ starting() ? 'Building your package…' : (job() ? 'Generate a new package' : 'Generate audit package') }}
+            {{ starting() ? c.export.generatingButton : c.export.generateButton }}
           </button>
         </div>
       </div>
 
       <!-- Job status -->
-      <div class="card" *ngIf="job() as j">
-        <div class="card-header">
-          <h2>Latest export</h2>
-          <span class="badge" [class]="jobBadge(j.status)">{{ statusLabel(j.status) }}</span>
-        </div>
-
+      <ui-card *ngIf="job() as j"
+               [title]="c.export.latestExportTitle"
+               [caption]="c.export.latestExportCaption">
         <div class="job-hero">
           <div class="job-icon" [class]="jobIconClass(j.status)">
             <div class="spinner" *ngIf="j.status === 'RUNNING' || j.status === 'QUEUED'"></div>
@@ -160,11 +156,7 @@ import { ExportJob } from '../../core/api/api.types';
             <mat-icon *ngIf="j.status === 'FAILED'">error</mat-icon>
           </div>
           <div class="job-body">
-            <div class="job-title">
-              {{ j.status === 'COMPLETED' ? 'Your audit package is ready' :
-                 j.status === 'FAILED'    ? 'Package build failed' :
-                                            'Building your audit package…' }}
-            </div>
+            <div class="job-title">{{ statusLabel(j.status) }}</div>
             <div class="job-sub">
               <ng-container *ngIf="j.status === 'COMPLETED' && j.sizeBytes">{{ (j.sizeBytes / 1024) | number:'1.0-1' }} KB · Built {{ j.completedAt | date:'MMM d, h:mm a' }}</ng-container>
               <ng-container *ngIf="j.status !== 'COMPLETED' && j.status !== 'FAILED'">Started {{ j.startedAt | date:'h:mm:ss a' }}</ng-container>
@@ -173,7 +165,7 @@ import { ExportJob } from '../../core/api/api.types';
           </div>
 
           <a *ngIf="j.status === 'COMPLETED'" [href]="downloadUrl(j.id)" download="syncpoint-audit-package.zip" class="btn primary">
-            <mat-icon>download</mat-icon>Download ZIP
+            <mat-icon>download</mat-icon>{{ c.export.downloadButton }}
           </a>
         </div>
 
@@ -193,20 +185,21 @@ import { ExportJob } from '../../core/api/api.types';
             <div>└── <span class="file">audit-log.json</span></div>
           </div>
         </div>
-      </div>
+      </ui-card>
 
       <!-- Empty state -->
-      <div class="card" *ngIf="!job()">
-        <div class="empty">
-          <div class="icon-wrap"><mat-icon>inventory_2</mat-icon></div>
-          <h3>No packages generated yet</h3>
-          <p>Generate one from the button above whenever you want a snapshot of your current evidence.</p>
-        </div>
-      </div>
+      <ui-card *ngIf="!job()" padding="flush">
+        <ui-empty-state
+          icon="inventory_2"
+          [title]="c.export.emptyTitle"
+          [description]="c.export.emptyMessage">
+        </ui-empty-state>
+      </ui-card>
     </div>
   `,
 })
 export class ExportComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   starting = signal(false);

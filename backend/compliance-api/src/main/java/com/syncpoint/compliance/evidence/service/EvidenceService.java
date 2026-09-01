@@ -25,6 +25,8 @@ import com.syncpoint.compliance.evidence.repository.EvidenceRepository;
 import com.syncpoint.compliance.evidence.repository.EvidenceReviewRepository;
 import com.syncpoint.compliance.evidence.repository.EvidenceVersionRepository;
 import com.syncpoint.compliance.storage.ObjectStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +48,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class EvidenceService {
+
+    private static final Logger log = LoggerFactory.getLogger(EvidenceService.class);
 
     private static final Set<String> ALLOWED_MIME = Set.of(
             "application/pdf",
@@ -226,7 +230,9 @@ public class EvidenceService {
         for (EvidenceVersion v : versions) {
             try {
                 storage.delete(v.getStorageKey());
-            } catch (RuntimeException ignore) { /* best-effort delete */ }
+            } catch (RuntimeException ex) {
+                log.warn("best-effort delete of evidence blob {} failed: {}", v.getStorageKey(), ex.getMessage());
+            }
         }
         evidenceRepo.delete(e);
     }

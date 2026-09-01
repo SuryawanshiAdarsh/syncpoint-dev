@@ -1,5 +1,6 @@
 package com.syncpoint.compliance.storage;
 
+import com.syncpoint.compliance.config.properties.StorageProperties;
 import io.minio.BucketExistsArgs;
 import io.minio.GetObjectArgs;
 import io.minio.MakeBucketArgs;
@@ -9,7 +10,6 @@ import io.minio.RemoveObjectArgs;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -26,15 +26,12 @@ public class ObjectStorageService {
     private final MinioClient client;
     private final String bucket;
 
-    public ObjectStorageService(@Value("${syncpoint.storage.endpoint}") String endpoint,
-                                @Value("${syncpoint.storage.access-key}") String accessKey,
-                                @Value("${syncpoint.storage.secret-key}") String secretKey,
-                                @Value("${syncpoint.storage.bucket}") String bucket) {
+    public ObjectStorageService(StorageProperties props) {
         this.client = MinioClient.builder()
-                .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
+                .endpoint(props.endpoint())
+                .credentials(props.accessKey(), props.secretKey())
                 .build();
-        this.bucket = bucket;
+        this.bucket = props.bucket();
     }
 
     @PostConstruct

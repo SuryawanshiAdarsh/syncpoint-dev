@@ -10,6 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 
 import { ApiService } from '../../core/api/api.service';
 import { Control, Evidence } from '../../core/api/api.types';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -89,9 +90,9 @@ import { Control, Evidence } from '../../core/api/api.types';
     <div class="page">
       <div class="page-header">
         <div>
-          <div class="eyebrow">Compliance</div>
-          <h1>Evidence</h1>
-          <p class="subtitle">Upload manual artifacts, map them to controls, and let AI suggest which controls each artifact might satisfy.</p>
+          <div class="eyebrow">{{ c.evidence.eyebrow }}</div>
+          <h1>{{ c.evidence.title }}</h1>
+          <p class="subtitle">{{ c.evidence.subtitle }}</p>
         </div>
       </div>
 
@@ -206,6 +207,7 @@ import { Control, Evidence } from '../../core/api/api.types';
   `,
 })
 export class EvidenceComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   items = signal<Evidence[]>([]);

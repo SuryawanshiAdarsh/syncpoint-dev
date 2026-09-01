@@ -1,0 +1,297 @@
+/**
+ * Single source of truth for every user-visible string in the UI.
+ *
+ * Rules:
+ *   - No component defines an inline user-visible string. Import CAPTIONS.
+ *   - Grouped by feature. `common` holds strings shared across features.
+ *   - Values are plain strings. Interpolation is done in the component.
+ *
+ * Swapping to Angular i18n or an HTTP-loaded locale later is a change of
+ * this file only — components stay put.
+ */
+export const CAPTIONS = {
+  common: {
+    appName: 'Syncpoint',
+    appTagline: 'Compliance evidence, automated.',
+    save: 'Save',
+    cancel: 'Cancel',
+    close: 'Close',
+    retry: 'Retry',
+    loading: 'Loading…',
+    error: 'Something went wrong.',
+    unauthorized: 'You do not have access to this action.',
+    signOut: 'Sign out',
+    account: 'Account',
+    settings: 'Settings',
+    restartOnboarding: 'Restart onboarding',
+  },
+
+  shell: {
+    sidebarSectionOverview: 'Overview',
+    sidebarSectionEvidence: 'Evidence',
+    sidebarSectionAutomation: 'Automation',
+    sidebarSectionAudit: 'Audit',
+    brandPlan: 'MVP · SOC 2',
+    navDashboard: 'Dashboard',
+    navControls: 'Controls',
+    navEvidence: 'Evidence',
+    navIntegrations: 'Integrations',
+    navAsk: 'Ask AI',
+    navExport: 'Audit Export',
+    navOnboarding: 'Onboarding',
+  },
+
+  auth: {
+    // Login
+    loginHeroTitle: 'Turn evidence collection into a',
+    loginHeroHighlight: '15-minute setup',
+    loginHeroTitleTail: ', not a quarter-long project.',
+    loginHeroSubtitle:
+      'Syncpoint connects your systems, gathers artifacts continuously, and packages an auditor-ready export in one click.',
+    loginFormTitle: 'Welcome back',
+    loginFormSubtitle: 'Sign in to your organization.',
+    emailLabel: 'Email',
+    emailPlaceholder: 'you@company.com',
+    passwordLabel: 'Password',
+    signInButton: 'Sign in',
+    signingInButton: 'Signing in…',
+    switchToRegister: 'New here?',
+    switchToRegisterAction: 'Create an organization',
+
+    // Register
+    registerHeroTitle: 'Start with a',
+    registerHeroHighlight: 'clean workspace',
+    registerHeroTitleTail: ' in under a minute.',
+    registerHeroSubtitle:
+      'You become the owner of a new organization. Invite reviewers next; connect systems whenever you are ready.',
+    registerFormTitle: 'Create your organization',
+    registerFormSubtitle: 'You will become the OWNER of this tenant.',
+    nameLabel: 'Your name',
+    namePlaceholder: 'Alex Chen',
+    organizationLabel: 'Organization',
+    organizationPlaceholder: 'Acme Corp',
+    createButton: 'Create organization',
+    creatingButton: 'Creating…',
+    switchToLogin: 'Already have an account?',
+    switchToLoginAction: 'Sign in',
+  },
+
+  dashboard: {
+    eyebrow: 'Overview',
+    heroDefault: 'Welcome back',
+    heroGreetingMorning: 'Good morning',
+    heroGreetingAfternoon: 'Good afternoon',
+    heroGreetingEvening: 'Good evening',
+    heroSubtitle:
+      'Track evidence coverage, review AI-suggested mappings, and export an auditor-ready package.',
+    coverageLabel: 'Coverage',
+    kpiCovered: 'Covered',
+    kpiPartial: 'Partial',
+    kpiNeedsReview: 'Needs review',
+    kpiMissing: 'Missing',
+    kpiEvidence: 'Evidence artifacts',
+    kpiIntegrations: 'Integrations',
+    kpiConnected: 'Connected',
+    gapsTitle: 'Evidence gaps',
+    gapsCaption: 'Controls without approved evidence — start here.',
+    gapsEmptyTitle: 'All controls covered',
+    gapsEmptyMessage:
+      'Every control has approved evidence. Consider exporting your audit package.',
+    recentEvidenceTitle: 'Recent evidence',
+    recentEvidenceCaption: 'The newest artifacts across all sources.',
+    recentEvidenceEmptyTitle: 'No evidence yet',
+    recentEvidenceEmptyMessage:
+      'Upload a document or connect an integration to start collecting.',
+    goToEvidence: 'Go to Evidence',
+    goToControls: 'Go to Controls',
+  },
+
+  controls: {
+    eyebrow: 'SOC 2 Framework',
+    title: 'Controls',
+    subtitle:
+      '15 demo controls across access, change management, security monitoring, and data protection. Click any control to see mapped evidence.',
+    searchPlaceholder: 'Search by code, title, category, or description…',
+    filterAll: 'All',
+    filterCovered: 'Covered',
+    filterPartial: 'Partial',
+    filterNeedsReview: 'Needs review',
+    filterMissing: 'Missing',
+    tableCode: 'Code',
+    tableTitle: 'Title',
+    tableCategory: 'Category',
+    tableStatus: 'Status',
+    emptyFilterTitle: 'No controls match your filter',
+    emptyFilterMessage: 'Try clearing the search or selecting a different status.',
+    countLine: (n: number, total: number) =>
+      `Showing ${n} of ${total} controls`,
+  },
+
+  controlDetail: {
+    backToControls: 'Back to Controls',
+    eyebrow: 'Control',
+    descriptionTitle: 'Description',
+    mappedEvidenceTitle: 'Mapped evidence',
+    mappedEvidenceCaption: 'Artifacts a reviewer has confirmed for this control.',
+    mappedEvidenceEmptyTitle: 'No evidence mapped yet',
+    mappedEvidenceEmptyMessage:
+      'Upload evidence or map an existing artifact from the Evidence page.',
+    aiAnalysisTitle: 'AI analysis',
+    aiAnalysisCaption:
+      'Retrieval-augmented suggestions. Always reviewed by a human.',
+    sourcesTitle: 'Sources',
+    sourcesCaption:
+      'Compliance-knowledge chunks the AI cited when producing the suggestion.',
+    confirmMapping: 'Confirm mapping',
+    rejectMapping: 'Reject',
+    addComment: 'Add comment',
+    uploadEvidence: 'Upload evidence',
+  },
+
+  evidence: {
+    eyebrow: 'Artifacts',
+    title: 'Evidence',
+    subtitle:
+      'Upload documents, review artifacts collected by integrations, and confirm which control each supports.',
+    uploadCardTitle: 'Upload evidence',
+    uploadCardCaption:
+      'PDF, CSV, JSON, or DOCX. Max 50 MB per file. Every upload is hashed, versioned, and immutable.',
+    dropzoneLabel: 'Drop a file here or',
+    dropzoneAction: 'Browse',
+    dropzoneHint: 'PDF, CSV, JSON, DOCX up to 50 MB',
+    nameLabel: 'Name',
+    namePlaceholder: 'Q1-2026 Access Review',
+    descriptionLabel: 'Description',
+    descriptionPlaceholder: 'What does this artifact demonstrate?',
+    uploadButton: 'Upload evidence',
+    uploadingButton: 'Uploading…',
+    listTitle: 'All evidence',
+    listCaption: (n: number) =>
+      `${n} artifact${n === 1 ? '' : 's'} collected across all sources.`,
+    tableName: 'Name',
+    tableSource: 'Source',
+    tableStatus: 'Status',
+    tableFreshness: 'Freshness',
+    tableActions: 'Actions',
+    emptyTitle: 'No evidence uploaded yet',
+    emptyMessage:
+      'Drop a file above or connect an integration to collect evidence automatically.',
+    mapToControlLabel: 'Map to control',
+    confirmMapping: 'Confirm mapping',
+    aiAnalyze: 'AI analyze',
+    aiAnalyzing: 'Analyzing…',
+    approveEvidence: 'Approve evidence',
+  },
+
+  integrations: {
+    eyebrow: 'Automation',
+    title: 'Integrations',
+    subtitle:
+      'Connect the systems your evidence lives in. All credentials are envelope-encrypted and never returned by the API.',
+    connectButton: 'Connect',
+    testConnection: 'Test connection',
+    collectNow: 'Collect now',
+    disconnect: 'Disconnect',
+    tokenLabel: 'GitHub personal access token',
+    tokenPlaceholder: 'github_pat_...',
+    displayNameLabel: 'Display name',
+    displayNamePlaceholder: 'Company GitHub',
+    emptyTitle: 'No integrations configured',
+    emptyMessage:
+      'Pick a provider above to start automating evidence collection.',
+    comingSoon: 'Coming soon',
+  },
+
+  onboarding: {
+    eyebrow: 'Get set up',
+    heroTitle: "Let's get you to your first evidence result.",
+    heroSubtitle:
+      'Five short steps. You can pause and come back — Syncpoint remembers where you left off.',
+    step1Title: 'Select a compliance framework',
+    step1Body:
+      'Start with SOC 2. Additional frameworks (ISO 27001, HIPAA) will unlock as they are added.',
+    step2Title: 'Connect your first system',
+    step2Body:
+      'GitHub is the fastest to demo. You will need a personal access token with read-only scopes.',
+    step3Title: 'Upload your first manual evidence',
+    step3Body:
+      'Not everything is auto-collectable. Drop a policy PDF, a screenshot, or an export CSV.',
+    step4Title: 'Map evidence to controls with AI',
+    step4Body:
+      'Click "AI analyze" on any artifact. The AI proposes a mapping with citations — a human confirms.',
+    step5Title: 'Watch your coverage grow',
+    step5Body:
+      'The dashboard shows coverage percentage, evidence gaps, and expiring artifacts.',
+    completeButton: 'Complete onboarding',
+    skipButton: 'Skip for now',
+  },
+
+  ask: {
+    eyebrow: 'Automation · RAG',
+    title: 'Ask AI',
+    subtitle:
+      'Compliance-knowledge Q&A grounded in a small SOC 2 demo corpus. Every answer cites the document chunks it used.',
+    disclaimer:
+      'AI answers are advisory. They summarize the demo corpus only — always confirm with your auditor and internal policies. Syncpoint never claims your organization is SOC 2 compliant.',
+    composerPlaceholder: 'Ask a compliance question…',
+    askButton: 'Ask',
+    thinkingButton: 'Thinking…',
+    suggestions: [
+      'What evidence proves periodic access review?',
+      'What does change management evidence look like?',
+      'What is required for MFA coverage?',
+      'How do I show incident response coverage?',
+    ],
+    youLabel: 'You',
+    assistantLabel: 'Syncpoint AI',
+    providerLabel: 'Provider',
+    modelLabel: 'Model',
+    promptLabel: 'Prompt',
+  },
+
+  export: {
+    eyebrow: 'Audit-ready',
+    title: 'Audit package',
+    heroHeadline: 'Package everything into one ZIP.',
+    heroSubtitle:
+      'A structured export the auditor can unzip and start sampling. Includes README, index, per-control folders, evidence files, and the audit log.',
+    generateButton: 'Generate audit package',
+    generatingButton: 'Building package…',
+    latestExportTitle: 'Latest export',
+    latestExportCaption:
+      'Your most recent packages. Downloads use short-lived signed URLs.',
+    downloadButton: 'Download',
+    emptyTitle: 'No packages generated yet',
+    emptyMessage:
+      'Click "Generate audit package" to build a ZIP for your auditor.',
+    packageContentsTitle: 'What is inside',
+    contentReadme: 'README.txt with the coverage summary',
+    contentIndex: 'index.csv listing every artifact by control',
+    contentControls: 'controls/CC*/ folders with evidence.json + raw files',
+    contentAudit: 'audit-log.json with every relevant audit event',
+    contentNoCreds: 'No credentials, tokens, or secrets ever appear in the ZIP.',
+  },
+
+  status: {
+    // Control statuses
+    COVERED: 'Covered',
+    PARTIAL: 'Partial',
+    NEEDS_REVIEW: 'Needs review',
+    MISSING: 'Missing',
+    // Evidence statuses
+    PENDING: 'Pending',
+    COLLECTED: 'Collected',
+    APPROVED: 'Approved',
+    REJECTED: 'Rejected',
+    // Integration statuses
+    CONNECTED: 'Connected',
+    DISCONNECTED: 'Disconnected',
+    ERROR: 'Error',
+    // Freshness
+    CURRENT: 'Current',
+    EXPIRING: 'Expiring',
+    EXPIRED: 'Expired',
+  },
+} as const;
+
+export type Captions = typeof CAPTIONS;

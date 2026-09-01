@@ -20,6 +20,8 @@ import com.syncpoint.compliance.integrations.entity.IntegrationProvider;
 import com.syncpoint.compliance.integrations.entity.IntegrationSchedule;
 import com.syncpoint.compliance.integrations.entity.IntegrationStatus;
 import com.syncpoint.compliance.integrations.repository.IntegrationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,8 @@ import java.util.UUID;
 
 @Service
 public class IntegrationService {
+
+    private static final Logger log = LoggerFactory.getLogger(IntegrationService.class);
 
     private final IntegrationRepository integrationRepo;
     private final SecretStore secretStore;
@@ -75,7 +79,12 @@ public class IntegrationService {
         integrationRepo.findByOrganizationIdAndProvider(orgId, IntegrationProvider.GITHUB)
                 .ifPresent(existing -> {
                     if (existing.getCredentialReference() != null) {
-                        try { secretStore.delete(existing.getCredentialReference()); } catch (RuntimeException ignore) { }
+                        try {
+                            secretStore.delete(existing.getCredentialReference());
+                        } catch (RuntimeException ex) {
+                            log.warn("could not delete previous credential {} for org {}: {}",
+                                    existing.getCredentialReference(), orgId, ex.getMessage());
+                        }
                     }
                     integrationRepo.delete(existing);
                 });
@@ -139,7 +148,12 @@ public class IntegrationService {
         Integration i = requireOwned(integrationId);
         i.setStatus(IntegrationStatus.DISCONNECTED);
         if (i.getCredentialReference() != null) {
-            try { secretStore.delete(i.getCredentialReference()); } catch (RuntimeException ignore) { }
+            try {
+                secretStore.delete(i.getCredentialReference());
+            } catch (RuntimeException ex) {
+                log.warn("could not delete credential {} on disconnect: {}",
+                        i.getCredentialReference(), ex.getMessage());
+            }
             i.setCredentialReference(null);
         }
         integrationRepo.save(i);

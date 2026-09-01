@@ -2,11 +2,11 @@ package com.syncpoint.compliance.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.syncpoint.compliance.common.exception.ErrorResponse;
+import com.syncpoint.compliance.config.properties.SecurityProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -33,11 +33,9 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     private final ObjectMapper mapper;
     private final Map<String, Deque<Long>> buckets = new ConcurrentHashMap<>();
 
-    public AuthRateLimitFilter(@Value("${syncpoint.security.rate-limit.auth-max:20}") int maxRequests,
-                               @Value("${syncpoint.security.rate-limit.window-seconds:60}") long windowSeconds,
-                               ObjectMapper mapper) {
-        this.maxRequests = maxRequests;
-        this.windowMillis = windowSeconds * 1000L;
+    public AuthRateLimitFilter(SecurityProperties props, ObjectMapper mapper) {
+        this.maxRequests = props.rateLimit().authMax();
+        this.windowMillis = props.rateLimit().windowSeconds() * 1000L;
         this.mapper = mapper;
     }
 

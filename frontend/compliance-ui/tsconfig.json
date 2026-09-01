@@ -5,6 +5,7 @@
     "paths": {
       "@ui":         ["src/app/shared/ui/index.ts"],
       "@ui/*":       ["src/app/shared/ui/*"],
+      "@captions":   ["src/app/shared/captions/index.ts"],
       "@core/*":     ["src/app/core/*"],
       "@features/*": ["src/app/features/*"],
       "@env/*":      ["src/environments/*"]

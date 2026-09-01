@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { ApiService } from '@core/api/api.service';
 import { Control, ControlStatus } from '@core/api/api.types';
+import { CAPTIONS } from '@captions';
 import {
   UiPageHeaderComponent,
   UiCardComponent,
@@ -59,7 +60,7 @@ import {
       <ui-page-header
         eyebrow="SOC 2 Framework"
         title="Controls"
-        subtitle="15 demo controls across access, change management, security monitoring, and data protection. Click any control to see mapped evidence.">
+        [subtitle]="c.controls.subtitle">
       </ui-page-header>
 
       <ui-toolbar>
@@ -127,6 +128,7 @@ import {
   `,
 })
 export class ControlsComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   all = signal<Control[]>([]);

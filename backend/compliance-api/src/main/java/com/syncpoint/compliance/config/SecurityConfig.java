@@ -3,6 +3,7 @@ package com.syncpoint.compliance.config;
 import com.syncpoint.compliance.common.security.AuthRateLimitFilter;
 import com.syncpoint.compliance.common.security.JwtAuthenticationFilter;
 import com.syncpoint.compliance.common.security.RestAuthenticationEntryPoint;
+import com.syncpoint.compliance.config.properties.SecurityProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -16,12 +17,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -44,17 +43,19 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
-    private final String[] corsAllowedOrigins;
+    private final List<String> corsAllowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           AuthRateLimitFilter authRateLimitFilter,
                           RestAuthenticationEntryPoint authenticationEntryPoint,
-                          @Value("${syncpoint.security.cors-allowed-origins:http://localhost:*,http://127.0.0.1:*}") String allowedOrigins) {
+                          SecurityProperties securityProperties) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authRateLimitFilter = authRateLimitFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
-        this.corsAllowedOrigins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
+        List<String> configured = securityProperties.corsAllowedOriginsList();
+        this.corsAllowedOrigins = configured.isEmpty()
+                ? List.of("http://localhost:*", "http://127.0.0.1:*")
+                : configured;
     }
 
     @Bean
@@ -86,7 +87,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of(corsAllowedOrigins));
+        cfg.setAllowedOriginPatterns(corsAllowedOrigins);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

@@ -1,6 +1,6 @@
 package com.syncpoint.compliance.ai.service;
 
-import com.syncpoint.compliance.ai.client.AiAnalysisClient;
+import com.syncpoint.compliance.ai.client.AiServiceClient;
 import com.syncpoint.compliance.ai.dto.AiMappingResult;
 import com.syncpoint.compliance.ai.entity.AiAnalysis;
 import com.syncpoint.compliance.ai.repository.AiAnalysisRepository;
@@ -18,6 +18,8 @@ import com.syncpoint.compliance.evidence.repository.EvidenceControlMappingReposi
 import com.syncpoint.compliance.evidence.repository.EvidenceRepository;
 import com.syncpoint.compliance.evidence.repository.EvidenceVersionRepository;
 import com.syncpoint.compliance.storage.ObjectStorageService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +29,9 @@ import java.util.UUID;
 @Service
 public class AiAnalysisService {
 
-    private final AiAnalysisClient client;
+    private static final Logger log = LoggerFactory.getLogger(AiAnalysisService.class);
+
+    private final AiServiceClient client;
     private final AiAnalysisRepository analyses;
     private final EvidenceRepository evidenceRepo;
     private final EvidenceVersionRepository versionRepo;
@@ -36,7 +40,7 @@ public class AiAnalysisService {
     private final ObjectStorageService storage;
     private final AuditService audit;
 
-    public AiAnalysisService(AiAnalysisClient client,
+    public AiAnalysisService(AiServiceClient client,
                              AiAnalysisRepository analyses,
                              EvidenceRepository evidenceRepo,
                              EvidenceVersionRepository versionRepo,
@@ -64,7 +68,12 @@ public class AiAnalysisService {
         EvidenceVersion v = versionRepo.findFirstByEvidenceIdOrderByVersionDesc(e.getId()).orElse(null);
         byte[] payload = new byte[0];
         if (v != null) {
-            try { payload = storage.get(v.getStorageKey()); } catch (RuntimeException ignore) { }
+            try {
+                payload = storage.get(v.getStorageKey());
+            } catch (RuntimeException ex) {
+                log.warn("could not fetch evidence payload for AI analysis (evidence={}): {}",
+                        e.getId(), ex.getMessage());
+            }
         }
 
         AiMappingResult r = client.mapEvidence(c, e, v, payload);

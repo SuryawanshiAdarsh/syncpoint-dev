@@ -77,3 +77,5 @@ logging:
     com.syncpoint: INFO
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-------}/%X{orgId:-------------}/%X{userId:-------------}] %logger{28} - %msg%n"

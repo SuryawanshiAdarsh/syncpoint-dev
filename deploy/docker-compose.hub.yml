@@ -73,7 +73,7 @@ services:
     restart: "no"
 
   backend:
-    image: adarshs1612/syncpoint-backend:0.1.0
+    image: adarshs1612/syncpoint-backend:0.5.0
     container_name: syncpoint-backend
     restart: unless-stopped
     depends_on:
@@ -100,7 +100,7 @@ services:
       start_period: 45s
 
   ai-service:
-    image: adarshs1612/syncpoint-ai-service:0.1.0
+    image: adarshs1612/syncpoint-ai-service:0.5.0
     container_name: syncpoint-ai
     restart: unless-stopped
     depends_on: [qdrant]
@@ -112,7 +112,7 @@ services:
       QDRANT_URL: http://qdrant:6333
 
   frontend:
-    image: adarshs1612/syncpoint-frontend:0.4.0
+    image: adarshs1612/syncpoint-frontend:0.5.0
     container_name: syncpoint-frontend
     restart: unless-stopped
     depends_on: [backend]

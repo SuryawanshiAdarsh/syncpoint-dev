@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ApiService } from '../../core/api/api.service';
 import { TokenStore } from '../../core/auth/token-store.service';
 import { Me } from '../../core/api/api.types';
+import { CAPTIONS } from '@captions';
 
 interface NavItem { path: string; label: string; icon: string; }
 interface NavSection { title: string; items: NavItem[]; }
@@ -220,10 +221,10 @@ interface NavSection { title: string; items: NavItem[]; }
                 </div>
               </div>
               <button mat-menu-item routerLink="/onboarding">
-                <mat-icon>rocket_launch</mat-icon><span>Restart onboarding</span>
+                <mat-icon>rocket_launch</mat-icon><span>{{ c.common.restartOnboarding }}</span>
               </button>
               <button mat-menu-item (click)="logout()">
-                <mat-icon>logout</mat-icon><span>Sign out</span>
+                <mat-icon>logout</mat-icon><span>{{ c.common.signOut }}</span>
               </button>
             </mat-menu>
           </div>
@@ -235,6 +236,7 @@ interface NavSection { title: string; items: NavItem[]; }
   `,
 })
 export class ShellComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
   private readonly store = inject(TokenStore);
   private readonly router = inject(Router);
@@ -248,17 +250,17 @@ export class ShellComponent implements OnInit {
   });
 
   readonly sections: NavSection[] = [
-    { title: 'Overview',   items: [
-        { path: '/dashboard',     label: 'Dashboard',     icon: 'insights' },
-        { path: '/onboarding',    label: 'Onboarding',    icon: 'rocket_launch' } ] },
-    { title: 'Compliance', items: [
-        { path: '/controls',      label: 'Controls',      icon: 'checklist' },
-        { path: '/evidence',      label: 'Evidence',      icon: 'description' } ] },
-    { title: 'Automation', items: [
-        { path: '/integrations',  label: 'Integrations',  icon: 'hub' },
-        { path: '/ask',           label: 'Ask AI',        icon: 'auto_awesome' } ] },
-    { title: 'Delivery',   items: [
-        { path: '/audit-package', label: 'Audit package', icon: 'inventory_2' } ] },
+    { title: CAPTIONS.shell.sidebarSectionOverview, items: [
+        { path: '/dashboard',     label: CAPTIONS.shell.navDashboard,    icon: 'insights' },
+        { path: '/onboarding',    label: CAPTIONS.shell.navOnboarding,   icon: 'rocket_launch' } ] },
+    { title: CAPTIONS.shell.sidebarSectionEvidence, items: [
+        { path: '/controls',      label: CAPTIONS.shell.navControls,     icon: 'checklist' },
+        { path: '/evidence',      label: CAPTIONS.shell.navEvidence,     icon: 'description' } ] },
+    { title: CAPTIONS.shell.sidebarSectionAutomation, items: [
+        { path: '/integrations',  label: CAPTIONS.shell.navIntegrations, icon: 'hub' },
+        { path: '/ask',           label: CAPTIONS.shell.navAsk,          icon: 'auto_awesome' } ] },
+    { title: CAPTIONS.shell.sidebarSectionAudit, items: [
+        { path: '/audit-package', label: CAPTIONS.shell.navExport,       icon: 'inventory_2' } ] },
   ];
 
   ngOnInit(): void {

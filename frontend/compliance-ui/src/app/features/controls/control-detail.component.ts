@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
+import { CAPTIONS } from '@captions';
 import { Control, Evidence } from '../../core/api/api.types';
 
 @Component({
@@ -65,21 +66,21 @@ import { Control, Evidence } from '../../core/api/api.types';
   `],
   template: `
     <div class="page">
-      <a routerLink="/controls" class="back"><mat-icon>arrow_back</mat-icon> All controls</a>
+      <a routerLink="/controls" class="back"><mat-icon>arrow_back</mat-icon> {{ c.controlDetail.backToControls }}</a>
 
-      <ng-container *ngIf="control() as c">
+      <ng-container *ngIf="control() as ctrl">
         <div class="hero">
           <div class="hero-top">
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-                <span class="code">{{ c.code }}</span>
-                <span class="cat">{{ c.category }}</span>
-                <span class="cat">Framework: {{ c.frameworkCode }}</span>
+                <span class="code">{{ ctrl.code }}</span>
+                <span class="cat">{{ ctrl.category }}</span>
+                <span class="cat">Framework: {{ ctrl.frameworkCode }}</span>
               </div>
-              <h1>{{ c.title }}</h1>
-              <p class="desc">{{ c.description }}</p>
+              <h1>{{ ctrl.title }}</h1>
+              <p class="desc">{{ ctrl.description }}</p>
             </div>
-            <span class="badge status-large" [class]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+            <span class="badge status-large" [class]="statusClass(ctrl.status)">{{ statusLabel(ctrl.status) }}</span>
           </div>
 
           <div class="meta">
@@ -100,15 +101,15 @@ import { Control, Evidence } from '../../core/api/api.types';
 
         <div class="card" style="padding: 0;">
           <div style="padding: 20px 24px 12px;">
-            <h2>Mapped evidence</h2>
-            <p class="muted small" style="margin-top: 4px;">Artifacts you've linked to this control, plus AI-suggested mappings awaiting confirmation.</p>
+            <h2>{{ c.controlDetail.mappedEvidenceTitle }}</h2>
+            <p class="muted small" style="margin-top: 4px;">{{ c.controlDetail.mappedEvidenceCaption }}</p>
           </div>
 
           <table class="data-table" *ngIf="evidence().length; else empty">
             <thead><tr>
-              <th style="padding-left:24px;">Name</th>
-              <th>Source</th>
-              <th>Status</th>
+              <th style="padding-left:24px;">{{ c.evidence.tableName }}</th>
+              <th>{{ c.evidence.tableSource }}</th>
+              <th>{{ c.evidence.tableStatus }}</th>
               <th style="text-align:right;padding-right:24px;">Collected</th>
             </tr></thead>
             <tbody>
@@ -128,8 +129,8 @@ import { Control, Evidence } from '../../core/api/api.types';
           <ng-template #empty>
             <div class="empty">
               <div class="icon-wrap"><mat-icon>find_in_page</mat-icon></div>
-              <h3>No evidence mapped yet</h3>
-              <p style="max-width: 380px;">Upload evidence from the Evidence page and map it here, or run <b>AI analyze</b> to get a suggested mapping.</p>
+              <h3>{{ c.controlDetail.mappedEvidenceEmptyTitle }}</h3>
+              <p style="max-width: 380px;">{{ c.controlDetail.mappedEvidenceEmptyMessage }}</p>
             </div>
           </ng-template>
         </div>
@@ -138,6 +139,7 @@ import { Control, Evidence } from '../../core/api/api.types';
   `,
 })
 export class ControlDetailComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ApiService);
 

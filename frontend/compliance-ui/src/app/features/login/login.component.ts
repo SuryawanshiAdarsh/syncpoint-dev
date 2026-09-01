@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
 import { TokenStore } from '../../core/auth/token-store.service';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -187,14 +188,11 @@ import { TokenStore } from '../../core/auth/token-store.service';
               <path d="M9 20 L16 8 L23 20 L19 20 L16 14 L13 20 Z" fill="white"/>
             </svg>
           </div>
-          <div class="brand-text">Syncpoint</div>
+          <div class="brand-text">{{ c.common.appName }}</div>
         </div>
 
-        <h1>Turn evidence collection into a <span class="highlight">15-minute setup</span>, not a quarter-long project.</h1>
-        <p class="tagline">
-          Connect your systems, let deterministic collectors gather artifacts, and get AI-assisted control mappings
-          — with a full audit trail and no compliance claims we can't back up.
-        </p>
+        <h1>{{ c.auth.loginHeroTitle }} <span class="highlight">{{ c.auth.loginHeroHighlight }}</span>{{ c.auth.loginHeroTitleTail }}</h1>
+        <p class="tagline">{{ c.auth.loginHeroSubtitle }}</p>
 
         <div class="features">
           <div class="feature">
@@ -216,22 +214,22 @@ import { TokenStore } from '../../core/auth/token-store.service';
 
       <div class="form-wrap">
         <div class="form-card">
-          <h2>Welcome back</h2>
-          <p class="sub">Sign in to continue to your workspace.</p>
+          <h2>{{ c.auth.loginFormTitle }}</h2>
+          <p class="sub">{{ c.auth.loginFormSubtitle }}</p>
 
           <form (ngSubmit)="submit()">
             <mat-form-field appearance="outline">
-              <mat-label>Work email</mat-label>
-              <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="username" placeholder="you@company.com">
+              <mat-label>{{ c.auth.emailLabel }}</mat-label>
+              <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="username" [placeholder]="c.auth.emailPlaceholder">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Password</mat-label>
+              <mat-label>{{ c.auth.passwordLabel }}</mat-label>
               <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password">
             </mat-form-field>
 
             <div class="actions">
               <button class="primary-btn" type="submit" [disabled]="loading()">
-                {{ loading() ? 'Signing in…' : 'Sign in' }}
+                {{ loading() ? c.auth.signingInButton : c.auth.signInButton }}
               </button>
             </div>
             <div *ngIf="error()" class="error">{{ error() }}</div>
@@ -239,7 +237,7 @@ import { TokenStore } from '../../core/auth/token-store.service';
 
           <div class="divider">or</div>
           <div class="foot-link">
-            No account yet? <a routerLink="/register">Create an organization →</a>
+            {{ c.auth.switchToRegister }} <a routerLink="/register">{{ c.auth.switchToRegisterAction }} →</a>
           </div>
 
           <div class="demo-hint">
@@ -252,6 +250,7 @@ import { TokenStore } from '../../core/auth/token-store.service';
   `,
 })
 export class LoginComponent {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
   private readonly store = inject(TokenStore);
   private readonly router = inject(Router);

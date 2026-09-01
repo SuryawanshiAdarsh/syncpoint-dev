@@ -8,6 +8,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 
 import { environment } from '../../../environments/environment';
+import { UiPageHeaderComponent } from '@ui';
+import { CAPTIONS } from '@captions';
 
 interface RagCitation { document: string; section?: string; score?: number; }
 interface RagResponse {
@@ -31,7 +33,8 @@ interface ChatMessage {
   standalone: true,
   selector: 'app-ask',
   imports: [CommonModule, FormsModule, MatButtonModule,
-            MatFormFieldModule, MatInputModule, MatIconModule],
+            MatFormFieldModule, MatInputModule, MatIconModule,
+            UiPageHeaderComponent],
   styles: [`
     .chat-wrap {
       display: flex; flex-direction: column;
@@ -156,51 +159,46 @@ interface ChatMessage {
   `],
   template: `
     <div class="page">
-      <div class="page-header">
-        <div>
-          <div class="eyebrow">Automation · RAG</div>
-          <h1>Ask AI</h1>
-          <p class="subtitle">Compliance-knowledge Q&A grounded in a small SOC 2 demo corpus. Every answer cites the document chunks it used.</p>
-        </div>
-      </div>
+      <ui-page-header
+        [eyebrow]="c.ask.eyebrow"
+        [title]="c.ask.title"
+        [subtitle]="c.ask.subtitle">
+      </ui-page-header>
 
       <div class="chat-wrap">
         <div class="disclaimer">
           <mat-icon>info</mat-icon>
-          <div>
-            AI answers are advisory. They summarize the demo corpus only — always confirm with your auditor and internal policies.
-            Syncpoint never claims your organization is SOC 2 compliant.
-          </div>
+          <div>{{ c.ask.disclaimer }}</div>
         </div>
 
         <!-- Suggestions when empty -->
         <div *ngIf="!messages().length" class="suggestions">
-          <button class="suggestion" *ngFor="let s of suggestions" (click)="askDirect(s)">{{ s }}</button>
+          <button class="suggestion" *ngFor="let s of c.ask.suggestions" (click)="askDirect(s)">{{ s }}</button>
         </div>
 
         <!-- Conversation -->
         <div class="messages" *ngIf="messages().length">
           <div *ngFor="let m of messages()" class="msg" [class.user]="m.role === 'user'" [class.assistant]="m.role === 'assistant'">
-            <div class="avatar" *ngIf="m.role === 'user'">You</div>
+            <div class="avatar" *ngIf="m.role === 'user'">{{ c.ask.youLabel }}</div>
             <div class="avatar" *ngIf="m.role === 'assistant'"><mat-icon style="font-size:16px;height:16px;width:16px;">auto_awesome</mat-icon></div>
             <div class="body">
-              <div class="who">{{ m.role === 'user' ? 'You' : 'Syncpoint AI' }}</div>
+              <div class="who">{{ m.role === 'user' ? c.ask.youLabel : c.ask.assistantLabel }}</div>
               <div class="content">
                 {{ m.text }}
 
                 <div class="citations" *ngIf="m.citations?.length">
-                  <div class="citation" *ngFor="let c of m.citations; let i = index">
+                  <div class="citation" *ngFor="let cit of m.citations; let i = index">
                     <span class="idx">{{ i + 1 }}</span>
-                    <span class="doc">{{ c.document }}</span>
-                    <span class="sec" *ngIf="c.section">{{ c.section }}</span>
-                    <span class="score" *ngIf="c.score !== undefined">score {{ c.score }}</span>
+                    <span class="doc">{{ cit.document }}</span>
+                    <span class="sec" *ngIf="cit.section">{{ cit.section }}</span>
+                    <span class="score" *ngIf="cit.score !== undefined">score {{ cit.score }}</span>
                   </div>
                 </div>
 
                 <div class="meta-line" *ngIf="m.meta">
-                  <span>Provider: <span class="pill">{{ m.meta.provider }}</span></span>
-                  <span>Model: <span class="pill">{{ m.meta.model }}</span></span>
-                  <span>Prompt: <span class="pill">{{ m.meta.promptVersion }}</span></span>
+                  <span>{{ c.ask.providerLabel }}: <span class="pill">{{ m.meta.provider }}</span></span>
+                  <span>{{ c.ask.modelLabel }}: <span class="pill">{{ m.meta.model }}</span></span>
+                  <span>{{ c.ask.promptLabel }}: <span class="pill">{{ m.meta.promptVersion }}</span></span>
                 </div>
               </div>
             </div>
@@ -209,7 +207,7 @@ interface ChatMessage {
           <div class="msg assistant" *ngIf="loading()">
             <div class="avatar"><mat-icon style="font-size:16px;height:16px;width:16px;">auto_awesome</mat-icon></div>
             <div class="body">
-              <div class="who">Syncpoint AI</div>
+              <div class="who">{{ c.ask.assistantLabel }}</div>
               <div class="content">
                 <span class="typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
               </div>
@@ -222,11 +220,11 @@ interface ChatMessage {
           <mat-icon style="color:var(--color-text-muted);font-size:20px;height:20px;width:20px;">chat_bubble_outline</mat-icon>
           <input [(ngModel)]="question"
                  (keydown.enter)="ask()"
-                 placeholder="Ask a compliance question…"
+                 [placeholder]="c.ask.composerPlaceholder"
                  [disabled]="loading()">
           <button class="btn primary sm" (click)="ask()" [disabled]="!question.trim() || loading()">
             <mat-icon style="font-size:14px;height:14px;width:14px;">send</mat-icon>
-            Ask
+            {{ loading() ? c.ask.thinkingButton : c.ask.askButton }}
           </button>
         </div>
 
@@ -236,19 +234,13 @@ interface ChatMessage {
   `,
 })
 export class AskComponent {
+  readonly c = CAPTIONS;
   private readonly http = inject(HttpClient);
 
   question = '';
   loading = signal(false);
   messages = signal<ChatMessage[]>([]);
   err = signal<string | null>(null);
-
-  readonly suggestions = [
-    'What evidence proves periodic access review?',
-    'What does change management evidence look like?',
-    'What is required for MFA coverage?',
-    'How do I show incident response coverage?',
-  ];
 
   askDirect(q: string): void {
     this.question = q;

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
 import { TokenStore } from '../../core/auth/token-store.service';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -99,13 +100,11 @@ import { TokenStore } from '../../core/auth/token-store.service';
       <div class="hero">
         <div class="brand">
           <div class="brand-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M9 20 L16 8 L23 20 L19 20 L16 14 L13 20 Z" fill="white"/></svg></div>
-          <div class="brand-text">Syncpoint</div>
+          <div class="brand-text">{{ c.common.appName }}</div>
         </div>
 
-        <h1>Start with a <span class="highlight">clean workspace</span> in under a minute.</h1>
-        <p class="tagline">
-          You'll create the organization, connect a system, and see your first evidence collected — before the demo tab in your browser has finished loading.
-        </p>
+        <h1>{{ c.auth.registerHeroTitle }} <span class="highlight">{{ c.auth.registerHeroHighlight }}</span>{{ c.auth.registerHeroTitleTail }}</h1>
+        <p class="tagline">{{ c.auth.registerHeroSubtitle }}</p>
 
         <div class="steps">
           <div class="step"><span class="num">1</span><span class="txt"><strong>Create your organization.</strong> You'll be the OWNER. Invite team-mates later from Settings.</span></div>
@@ -119,30 +118,30 @@ import { TokenStore } from '../../core/auth/token-store.service';
 
       <div class="form-wrap">
         <div class="form-card">
-          <h2>Create your organization</h2>
-          <p class="sub">You'll become the OWNER. Free MVP demo — no card required.</p>
+          <h2>{{ c.auth.registerFormTitle }}</h2>
+          <p class="sub">{{ c.auth.registerFormSubtitle }}</p>
 
           <form (ngSubmit)="submit()">
             <mat-form-field appearance="outline">
-              <mat-label>Full name</mat-label>
-              <input matInput name="name" [(ngModel)]="name" required autocomplete="name">
+              <mat-label>{{ c.auth.nameLabel }}</mat-label>
+              <input matInput name="name" [(ngModel)]="name" required autocomplete="name" [placeholder]="c.auth.namePlaceholder">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Work email</mat-label>
-              <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="email" placeholder="you@company.com">
+              <mat-label>{{ c.auth.emailLabel }}</mat-label>
+              <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="email" [placeholder]="c.auth.emailPlaceholder">
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Password (min 12 characters)</mat-label>
               <input matInput type="password" name="password" [(ngModel)]="password" minlength="12" required autocomplete="new-password">
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Organization name</mat-label>
-              <input matInput name="org" [(ngModel)]="organizationName" required placeholder="Acme Corp">
+              <mat-label>{{ c.auth.organizationLabel }}</mat-label>
+              <input matInput name="org" [(ngModel)]="organizationName" required [placeholder]="c.auth.organizationPlaceholder">
             </mat-form-field>
 
             <div class="actions">
               <button class="primary-btn" type="submit" [disabled]="loading()">
-                {{ loading() ? 'Creating your organization…' : 'Create organization' }}
+                {{ loading() ? c.auth.creatingButton : c.auth.createButton }}
               </button>
             </div>
             <div *ngIf="error()" class="error">{{ error() }}</div>
@@ -150,7 +149,7 @@ import { TokenStore } from '../../core/auth/token-store.service';
 
           <div class="divider">or</div>
           <div class="foot-link">
-            Already have an account? <a routerLink="/login">Sign in →</a>
+            {{ c.auth.switchToLogin }} <a routerLink="/login">{{ c.auth.switchToLoginAction }} →</a>
           </div>
 
           <p class="fine-print">
@@ -163,6 +162,7 @@ import { TokenStore } from '../../core/auth/token-store.service';
   `,
 })
 export class RegisterComponent {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
   private readonly store = inject(TokenStore);
   private readonly router = inject(Router);

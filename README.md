@@ -1,51 +1,121 @@
-# AI Compliance Evidence Collector
+# Syncpoint Compliance
 
 A B2B SaaS MVP for automated SOC 2 evidence collection, evidence
 mapping, AI-assisted gap analysis, and audit-package generation.
 
-## Architecture
+## Try it in 2 minutes (any machine with Docker Desktop)
 
--   Angular --- frontend
--   Spring Boot / Java 21 --- core backend
--   Python / FastAPI --- AI and RAG service
--   PostgreSQL --- relational data
--   Redis --- jobs/cache
--   Qdrant --- vector search
--   MinIO --- local S3-compatible evidence storage
--   Docker Compose --- local environment
+You do **not** need to clone the repo. Two files are enough.
 
-## Repository
+```powershell
+# 1. Create a scratch folder
+mkdir syncpoint-demo; cd syncpoint-demo
 
-``` text
-ai-compliance-evidence/
-├── frontend/
-├── backend/
-├── ai-service/
-├── database/
-├── docs/
-├── infrastructure/
-├── docker-compose.yml
-├── .env.example
-├── PROJECT_SPEC.md
-└── README.md
+# 2. Grab the compose file and env template
+curl -O https://raw.githubusercontent.com/SuryawanshiAdarsh/syncpoint-dev/main/deploy/docker-compose.hub.yml
+curl -O https://raw.githubusercontent.com/SuryawanshiAdarsh/syncpoint-dev/main/deploy/.env.example
+Copy-Item .env.example .env
+
+# 3. Pull + start
+docker compose -f docker-compose.hub.yml up -d
+
+# 4. Wait ~30 seconds, then open
+start http://localhost:4200
 ```
 
-## Important
+Then click **Register** on the sign-in screen to create your first tenant. That's it — no CLI, no seed script needed.
 
-`PROJECT_SPEC.md` is the source of truth for implementation.
+macOS / Linux is identical apart from `cp` instead of `Copy-Item`:
 
-Read it before changing architecture or creating new modules.
+```bash
+mkdir syncpoint-demo && cd syncpoint-demo
+curl -O https://raw.githubusercontent.com/SuryawanshiAdarsh/syncpoint-dev/main/deploy/docker-compose.hub.yml
+curl -O https://raw.githubusercontent.com/SuryawanshiAdarsh/syncpoint-dev/main/deploy/.env.example
+cp .env.example .env
+docker compose -f docker-compose.hub.yml up -d
+open http://localhost:4200
+```
 
-## Local setup
+The stack pulls `syncpoint-backend:0.5.0`, `syncpoint-ai-service:0.5.0`, and `syncpoint-frontend:0.5.0` from Docker Hub, plus stock images for Postgres, Redis, Qdrant, and MinIO. Total download ≈ 700 MB.
 
-Prerequisites:
+### Ports opened
 
--   Git
--   Docker Desktop
--   Java 21
--   Node.js LTS
--   Python 3.12+
--   Maven (or use the Maven wrapper generated in Phase 1)
+| Port | Service |
+|---|---|
+| 4200 | Angular UI (front door) — nginx proxies `/api/*` and `/actuator/*` to the backend |
+| 9001 | MinIO console (evidence blobs) — optional, for inspecting evidence uploads |
+
+Backend, AI service, Postgres, Redis, Qdrant, and MinIO API are **not** exposed on the host — everything happens on the internal Docker network.
+
+### Shut it down / wipe state
+
+```powershell
+docker compose -f docker-compose.hub.yml down            # stop but keep data
+docker compose -f docker-compose.hub.yml down -v         # stop and delete all data
+```
+
+### Bring your own OpenAI key (optional)
+
+Set these in `.env` before `docker compose up -d`:
+
+```
+LLM_PROVIDER=openai
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+```
+
+Without them, the AI service runs with a deterministic stub — good enough for demo and CI.
+
+## Repository layout
+
+``` text
+syncpoint-dev/
+├── frontend/                  # Angular 18 SPA
+├── backend/                   # Spring Boot 3, Java 21
+├── ai-service/                # FastAPI + RAG + LLM abstractions
+├── database/                  # Flyway migrations + demo seed
+├── deploy/
+│   ├── docker-compose.hub.yml # Pull prebuilt images from Docker Hub
+│   └── .env.example
+├── dev-guide/                 # ARCHITECTURE, BUILD-PLAN, MVP-COMPLETION-PLAN, STATUS
+├── docs/                      # Product/system specs
+├── docker-compose.yml         # Local build compose (for development)
+├── Dockerfile.appliance       # All-in-one image (postgres+minio+backend+ai+nginx via s6)
+├── PROJECT_SPEC*.md           # Source-of-truth specifications
+└── README.md                  # This file
+```
+
+## Building from source (contributors)
+
+```powershell
+git clone https://github.com/SuryawanshiAdarsh/syncpoint-dev.git
+cd syncpoint-dev
+Copy-Item .env.example .env
+docker compose up -d --build
+```
+
+That builds `backend`, `ai-service`, and `frontend` from local sources.
+
+Docs to read next:
+
+- [dev-guide/ARCHITECTURE.md](dev-guide/ARCHITECTURE.md) — layer contracts, exception hierarchy, tenant isolation, config properties
+- [dev-guide/MVP-COMPLETION-PLAN.md](dev-guide/MVP-COMPLETION-PLAN.md) — remaining milestones (M1–M10)
+- [PROJECT_SPEC3.md](PROJECT_SPEC3.md) — MVP completion spec (source of truth)
+
+## Prerequisites for local development
+
+Only Docker Desktop is needed to **run** the app.
+To **modify** the code you additionally need:
+
+- Java 21 + Maven (or the Maven wrapper)
+- Node.js LTS
+- Python 3.12+
+
+---
+
+## Legacy setup instructions (superseded by the Quickstart above)
+
+The following section is retained for anyone coming from earlier docs.
 
 ### 1. Environment
 

@@ -1,5 +1,6 @@
 package com.syncpoint.compliance.config;
 
+import com.syncpoint.compliance.common.logging.MdcTaskDecorator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -13,22 +14,21 @@ public class AsyncConfig {
 
     @Bean(name = "collectionExecutor")
     public Executor collectionExecutor() {
-        ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
-        exec.setCorePoolSize(2);
-        exec.setMaxPoolSize(8);
-        exec.setQueueCapacity(64);
-        exec.setThreadNamePrefix("collect-");
-        exec.initialize();
-        return exec;
+        return build("collect-", 2, 8, 64);
     }
 
     @Bean(name = "exportExecutor")
     public Executor exportExecutor() {
+        return build("export-", 1, 4, 32);
+    }
+
+    private ThreadPoolTaskExecutor build(String prefix, int core, int max, int queue) {
         ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
-        exec.setCorePoolSize(1);
-        exec.setMaxPoolSize(4);
-        exec.setQueueCapacity(32);
-        exec.setThreadNamePrefix("export-");
+        exec.setCorePoolSize(core);
+        exec.setMaxPoolSize(max);
+        exec.setQueueCapacity(queue);
+        exec.setThreadNamePrefix(prefix);
+        exec.setTaskDecorator(new MdcTaskDecorator());
         exec.initialize();
         return exec;
     }

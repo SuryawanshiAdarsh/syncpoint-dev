@@ -7,6 +7,7 @@ import { forkJoin } from 'rxjs';
 
 import { ApiService } from '../../core/api/api.service';
 import { DashboardSummary, Evidence, Framework, Integration } from '../../core/api/api.types';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -92,9 +93,9 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
   template: `
     <div class="page">
       <div class="hero">
-        <div class="eyebrow">Get started</div>
-        <h1>Let's get you to your first evidence result.</h1>
-        <p>Five short steps. Complete them in any order — Syncpoint tracks your progress and remembers where you left off.</p>
+        <div class="eyebrow">{{ c.onboarding.eyebrow }}</div>
+        <h1>{{ c.onboarding.heroTitle }}</h1>
+        <p>{{ c.onboarding.heroSubtitle }}</p>
 
         <div class="progress-row">
           <div class="progress-bar"><div class="fill" [style.width.%]="progressPct()"></div></div>
@@ -112,10 +113,10 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
           <span *ngIf="framework() === null">1</span>
         </div>
         <div class="step-body">
-          <h3>Select a compliance framework</h3>
+          <h3>{{ c.onboarding.step1Title }}</h3>
           <p class="desc">
             <span *ngIf="framework() as f">✓ <b>{{ f.name }}</b> ({{ f.version }}) is active for your workspace. 15 controls are pre-loaded.</span>
-            <span *ngIf="!framework()">Pick the framework you're working toward. SOC 2 is loaded by default.</span>
+            <span *ngIf="!framework()">{{ c.onboarding.step1Body }}</span>
           </p>
         </div>
       </div>
@@ -127,10 +128,10 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
           <span *ngIf="!hasIntegration()">2</span>
         </div>
         <div class="step-body">
-          <h3>Connect your first system</h3>
+          <h3>{{ c.onboarding.step2Title }}</h3>
           <p class="desc">
             <span *ngIf="hasIntegration()">✓ You have {{ integrations().length }} integration{{ integrations().length === 1 ? '' : 's' }} connected.</span>
-            <span *ngIf="!hasIntegration()">Start with GitHub — paste a fine-grained PAT and Syncpoint pulls organization / repository / branch-protection evidence automatically.</span>
+            <span *ngIf="!hasIntegration()">{{ c.onboarding.step2Body }}</span>
           </p>
           <div class="step-cta" *ngIf="!hasIntegration()">
             <a routerLink="/integrations" class="btn primary"><mat-icon>link</mat-icon>Connect GitHub</a>
@@ -145,10 +146,10 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
           <span *ngIf="!hasEvidence()">3</span>
         </div>
         <div class="step-body">
-          <h3>Upload your first manual evidence</h3>
+          <h3>{{ c.onboarding.step3Title }}</h3>
           <p class="desc">
             <span *ngIf="hasEvidence()">✓ You have {{ evidenceCount() }} evidence artifact{{ evidenceCount() === 1 ? '' : 's' }} uploaded.</span>
-            <span *ngIf="!hasEvidence()">Drop in a PDF or JSON — anything up to 50 MB. Evidence is hashed and stored in encrypted object storage.</span>
+            <span *ngIf="!hasEvidence()">{{ c.onboarding.step3Body }}</span>
           </p>
           <div class="step-cta" *ngIf="!hasEvidence()">
             <a routerLink="/evidence" class="btn ghost"><mat-icon>upload_file</mat-icon>Upload evidence</a>
@@ -163,10 +164,10 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
           <span *ngIf="!hasMappings()">4</span>
         </div>
         <div class="step-body">
-          <h3>Map evidence to controls with AI</h3>
+          <h3>{{ c.onboarding.step4Title }}</h3>
           <p class="desc">
             <span *ngIf="hasMappings()">✓ You have {{ mappedCount() }} control{{ mappedCount() === 1 ? '' : 's' }} with mappings.</span>
-            <span *ngIf="!hasMappings()">On the Evidence page, click <b>AI analyze</b>. Suggestions land as <code>AI_SUGGESTED</code> mappings that you can confirm.</span>
+            <span *ngIf="!hasMappings()">{{ c.onboarding.step4Body }}</span>
           </p>
         </div>
       </div>
@@ -178,10 +179,10 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
           <span *ngIf="!hasCoverage()">5</span>
         </div>
         <div class="step-body">
-          <h3>Watch your coverage grow</h3>
+          <h3>{{ c.onboarding.step5Title }}</h3>
           <p class="desc">
             <span *ngIf="hasCoverage()">✓ You're at {{ summary()?.coveragePercent }}% coverage. Nice progress.</span>
-            <span *ngIf="!hasCoverage()">The dashboard tracks Covered / Partial / Missing / Needs Review live as you work.</span>
+            <span *ngIf="!hasCoverage()">{{ c.onboarding.step5Body }}</span>
           </p>
           <div class="step-cta">
             <a routerLink="/dashboard" class="btn ghost"><mat-icon>insights</mat-icon>Open dashboard</a>
@@ -192,6 +193,7 @@ import { DashboardSummary, Evidence, Framework, Integration } from '../../core/a
   `,
 })
 export class OnboardingComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   framework = signal<Framework | null>(null);

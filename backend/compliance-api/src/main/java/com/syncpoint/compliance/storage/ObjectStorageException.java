@@ -1,6 +1,13 @@
 package com.syncpoint.compliance.storage;
 
-public class ObjectStorageException extends RuntimeException {
-    public ObjectStorageException(String message, Throwable cause) { super(message, cause); }
-    public ObjectStorageException(String message) { super(message); }
+import com.syncpoint.compliance.common.exception.ApiException;
+import org.springframework.http.HttpStatus;
+
+public class ObjectStorageException extends ApiException {
+    public ObjectStorageException(String message, Throwable cause) {
+        super(HttpStatus.BAD_GATEWAY, "STORAGE_ERROR", message, cause);
+    }
+    public ObjectStorageException(String message) {
+        super(HttpStatus.BAD_GATEWAY, "STORAGE_ERROR", message);
+    }
 }

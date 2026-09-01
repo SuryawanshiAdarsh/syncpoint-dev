@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
 import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
+import { CAPTIONS } from '@captions';
 
 @Component({
   standalone: true,
@@ -89,8 +90,7 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
     .kpi-card .desc  { font-size: 12.5px; color: var(--color-text-muted); }
 
     /* Two-column layout */
-    .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-4); }
-    @media (max-width: 1000px) { .two-col { grid-template-columns: 1fr; } }
+    .two-col { display: grid; grid-template-columns: 1fr; gap: var(--space-4); }
 
     .link-arrow {
       display: inline-flex; align-items: center; gap: 4px;
@@ -145,25 +145,21 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
             </svg>
             <div class="center">
               <div class="pct">{{ s.coveragePercent }}%</div>
-              <div class="label">Evidence coverage</div>
+              <div class="label">{{ c.dashboard.coverageLabel }}</div>
             </div>
           </div>
         </div>
 
         <div class="hero-copy">
-          <div class="eyebrow">SOC 2 · Demo Framework</div>
+          <div class="eyebrow">{{ c.dashboard.eyebrow }}</div>
           <h1>{{ heroHeading(s) }}</h1>
-          <p>
-            {{ s.totalEvidence }} evidence artifact{{ s.totalEvidence === 1 ? '' : 's' }} collected,
-            {{ s.connectedIntegrations }} of {{ s.totalIntegrations }} integration{{ s.totalIntegrations === 1 ? '' : 's' }} connected.
-            Track every mapping decision back to who made it — human or AI, with a citation trail.
-          </p>
+          <p>{{ c.dashboard.heroSubtitle }}</p>
 
           <div class="status-legend">
-            <div class="item"><span class="swatch" style="background:#10b981;"></span>Covered <span class="num">{{ s.byStatus.COVERED }}</span></div>
-            <div class="item"><span class="swatch" style="background:#f59e0b;"></span>Partial <span class="num">{{ s.byStatus.PARTIAL }}</span></div>
-            <div class="item"><span class="swatch" style="background:#8b5cf6;"></span>Needs review <span class="num">{{ s.byStatus.NEEDS_REVIEW }}</span></div>
-            <div class="item"><span class="swatch" style="background:#ef4444;"></span>Missing <span class="num">{{ s.byStatus.MISSING }}</span></div>
+            <div class="item"><span class="swatch" style="background:#10b981;"></span>{{ c.status.COVERED }} <span class="num">{{ s.byStatus.COVERED }}</span></div>
+            <div class="item"><span class="swatch" style="background:#f59e0b;"></span>{{ c.status.PARTIAL }} <span class="num">{{ s.byStatus.PARTIAL }}</span></div>
+            <div class="item"><span class="swatch" style="background:#8b5cf6;"></span>{{ c.status.NEEDS_REVIEW }} <span class="num">{{ s.byStatus.NEEDS_REVIEW }}</span></div>
+            <div class="item"><span class="swatch" style="background:#ef4444;"></span>{{ c.status.MISSING }} <span class="num">{{ s.byStatus.MISSING }}</span></div>
           </div>
         </div>
       </div>
@@ -196,11 +192,11 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
       <div class="two-col">
         <div class="card">
           <div class="card-header">
-            <h2>Evidence gaps</h2>
-            <a routerLink="/controls" class="link-arrow">Review controls <mat-icon style="font-size:14px;height:14px;width:14px;">arrow_forward</mat-icon></a>
+            <h2>{{ c.dashboard.gapsTitle }}</h2>
+            <a routerLink="/controls" class="link-arrow">{{ c.dashboard.goToControls }} <mat-icon style="font-size:14px;height:14px;width:14px;">arrow_forward</mat-icon></a>
           </div>
           <table class="data-table" *ngIf="gaps().length; else emptyG">
-            <thead><tr><th>Control</th><th>Title</th><th>Category</th><th style="text-align:right;">Status</th></tr></thead>
+            <thead><tr><th>{{ c.controls.tableCode }}</th><th>{{ c.controls.tableTitle }}</th><th>{{ c.controls.tableCategory }}</th><th style="text-align:right;">{{ c.controls.tableStatus }}</th></tr></thead>
             <tbody>
               <tr *ngFor="let g of gaps() | slice:0:6">
                 <td><a [routerLink]="['/controls', g.controlId]" class="code-cell">{{ g.code }}</a></td>
@@ -213,19 +209,19 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
           <ng-template #emptyG>
             <div class="empty">
               <div class="icon-wrap"><mat-icon>celebration</mat-icon></div>
-              <h3>All controls covered</h3>
-              <p>You're in great shape.</p>
+              <h3>{{ c.dashboard.gapsEmptyTitle }}</h3>
+              <p>{{ c.dashboard.gapsEmptyMessage }}</p>
             </div>
           </ng-template>
         </div>
 
         <div class="card">
           <div class="card-header">
-            <h2>Recent evidence</h2>
-            <a routerLink="/evidence" class="link-arrow">See all <mat-icon style="font-size:14px;height:14px;width:14px;">arrow_forward</mat-icon></a>
+            <h2>{{ c.dashboard.recentEvidenceTitle }}</h2>
+            <a routerLink="/evidence" class="link-arrow">{{ c.dashboard.goToEvidence }} <mat-icon style="font-size:14px;height:14px;width:14px;">arrow_forward</mat-icon></a>
           </div>
           <table class="data-table" *ngIf="recent().length; else emptyEv">
-            <thead><tr><th>Name</th><th>Source</th><th style="text-align:right;">Freshness</th></tr></thead>
+            <thead><tr><th>{{ c.evidence.tableName }}</th><th>{{ c.evidence.tableSource }}</th><th style="text-align:right;">{{ c.evidence.tableFreshness }}</th></tr></thead>
             <tbody>
               <tr *ngFor="let e of recent() | slice:0:6">
                 <td>
@@ -240,8 +236,8 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
           <ng-template #emptyEv>
             <div class="empty">
               <div class="icon-wrap"><mat-icon>upload_file</mat-icon></div>
-              <h3>No evidence yet</h3>
-              <p>Upload from the Evidence page or connect an integration.</p>
+              <h3>{{ c.dashboard.recentEvidenceEmptyTitle }}</h3>
+              <p>{{ c.dashboard.recentEvidenceEmptyMessage }}</p>
             </div>
           </ng-template>
         </div>
@@ -250,6 +246,7 @@ import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.t
   `,
 })
 export class DashboardComponent implements OnInit {
+  readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
 
   summary = signal<DashboardSummary | null>(null);

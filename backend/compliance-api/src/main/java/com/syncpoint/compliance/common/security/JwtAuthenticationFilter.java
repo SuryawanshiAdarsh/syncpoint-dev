@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +27,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String BEARER = "Bearer ";
+    private static final String MDC_ORG = "orgId";
+    private static final String MDC_USER = "userId";
 
     private final JwtService jwtService;
 
@@ -62,9 +65,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             var auth = new UsernamePasswordAuthenticationToken(userId, null, List.of(authority));
             SecurityContextHolder.getContext().setAuthentication(auth);
             TenantContext.set(new TenantContext.Principal(userId, orgId, role, email));
+            MDC.put(MDC_ORG, orgId.toString());
+            MDC.put(MDC_USER, userId.toString());
 
             chain.doFilter(request, response);
         } finally {
+            MDC.remove(MDC_ORG);
+            MDC.remove(MDC_USER);
             TenantContext.clear();
             SecurityContextHolder.clearContext();
         }

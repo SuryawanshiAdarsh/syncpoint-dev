@@ -41,6 +41,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     S6_KEEP_ENV=1 \
     S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
     S6_CMD_WAIT_FOR_SERVICES_MAXTIME=120000 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PGDATA=/var/lib/syncpoint/postgres \
     POSTGRES_DB=compliance \
     POSTGRES_USER=compliance \
@@ -56,22 +58,31 @@ ENV DEBIAN_FRONTEND=noninteractive \
     JAVA_HOME=/opt/java/openjdk \
     PATH=/opt/java/openjdk/bin:/usr/lib/postgresql/15/bin:$PATH
 
-# --- OS packages: postgres, nginx, tools ---
+# --- OS packages, split by concern so no single layer is > ~200 MB compressed ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl xz-utils gnupg lsb-release procps sudo \
-      postgresql-15 postgresql-client-15 \
-      nginx \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends nginx \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client-15 \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-15 \
  && rm -rf /var/lib/apt/lists/*
 
 # --- Temurin JRE 21 (backend requires Java 21) ---
 COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
 
-# --- MinIO server + client ---
+# --- MinIO server (~95 MB) and mc client (~25 MB) as separate layers ---
 RUN curl -fsSL -o /usr/local/bin/minio \
       "https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}" \
- && curl -fsSL -o /usr/local/bin/mc \
+ && chmod +x /usr/local/bin/minio
+
+RUN curl -fsSL -o /usr/local/bin/mc \
       "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.${MC_RELEASE}" \
- && chmod +x /usr/local/bin/minio /usr/local/bin/mc
+ && chmod +x /usr/local/bin/mc
 
 # --- s6-overlay v3 ---
 ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/s6-noarch.tar.xz
@@ -91,9 +102,22 @@ COPY --from=backend-build /work/target/app.jar /opt/syncpoint/backend/app.jar
 RUN mkdir -p /usr/share/nginx/html
 COPY --from=frontend-build /work/dist/compliance-ui/browser /usr/share/nginx/html
 
-# --- AI service ---
+# --- AI service Python venv, staged install by weight so no layer > ~150 MB ---
 RUN mkdir -p /opt/syncpoint/ai-service \
- && python3 -m venv /opt/syncpoint/ai-service/venv
+ && python3 -m venv /opt/syncpoint/ai-service/venv \
+ && /opt/syncpoint/ai-service/venv/bin/pip install --no-cache-dir --disable-pip-version-check \
+      --upgrade pip setuptools wheel
+
+# heaviest: native wheels
+RUN /opt/syncpoint/ai-service/venv/bin/pip install --no-cache-dir --disable-pip-version-check \
+      "numpy==2.5.2" "grpcio==1.83.1" "grpcio-tools==1.83.1"
+
+# mid tier: qdrant + pydantic + httpx families
+RUN /opt/syncpoint/ai-service/venv/bin/pip install --no-cache-dir --disable-pip-version-check \
+      "qdrant-client==1.12.1" "pydantic==2.9.2" "pydantic-settings==2.6.1" \
+      "httpx==0.27.2" "h2==4.4.1"
+
+# remainder: whatever else requirements.txt declares
 COPY ai-service/requirements.txt /tmp/ai-req.txt
 RUN /opt/syncpoint/ai-service/venv/bin/pip install --no-cache-dir --disable-pip-version-check -r /tmp/ai-req.txt \
  && rm /tmp/ai-req.txt
@@ -107,8 +131,7 @@ RUN find /etc/s6-overlay/s6-rc.d /appliance/scripts -type f -exec sed -i 's/\r$/
  && find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name up \) -exec chmod +x {} + \
  && chmod +x /appliance/scripts/*.sh \
  && rm -f /etc/nginx/sites-enabled/default \
- && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
- && chown -R app:app /opt/syncpoint
+ && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # --- Persistent state root ---
 RUN mkdir -p /var/lib/syncpoint /var/lib/syncpoint/postgres /var/lib/syncpoint/minio /var/lib/syncpoint/secrets \
