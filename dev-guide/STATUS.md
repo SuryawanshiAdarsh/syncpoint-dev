@@ -1,10 +1,30 @@
-# Syncpoint MVP — Status (as of 2026-09-01)
+# Syncpoint MVP — Status (as of 2026-09-02)
 
 At-a-glance status of everything against the two specifications
-(`PROJECT_SPEC.md`, `PROJECT_SPEC2.md`). Complements
-[BUILD-PLAN.md](BUILD-PLAN.md), which is the more granular working scratchpad.
+(`PROJECT_SPEC.md`, `PROJECT_SPEC2.md`, `PROJECT_SPEC3.md`).
+Master plan: [ROADMAP.md](ROADMAP.md).
+Detailed milestones: [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md).
+Non-code readiness: [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md).
+Layer contracts: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP scope
+
+---
+
+## What changed in the current pass (E0 hardening + captions)
+
+- ✅ **E0.1** Configuration consolidation — 4 `@ConfigurationProperties` records (Ai / Storage / SecretStore / Security). All 12 `@Value` sites removed.
+- ✅ **E0.2** AI HTTP client deduped — renamed to `AiServiceClient`, shared `HttpClient` bean, `RagController` reduced to a thin proxy.
+- ✅ **E0.3** Exception hierarchy tightened — `AiServiceException`, `ObjectStorageException` now extends `ApiException`, 4 silent `catch (RuntimeException ignore)` blocks replaced with `log.warn`, specific catches of `IOException`/`HttpTimeoutException`/`InterruptedException` in `AiServiceClient`.
+- ✅ **E0.4** AI service exception middleware — `app/errors.py` produces the same `{timestamp, status, code, message, path}` shape as the Java backend.
+- ✅ **E0.5** MDC + `X-Request-Id` correlation — new `RequestContextFilter` (backend) + `RequestIdMiddleware` (AI). One `X-Request-Id` traces backend → AI service in both log outputs. `MdcTaskDecorator` propagates MDC across `@Async` boundaries.
+- ✅ **E0.6** AI service router split — `main.py` reduced from 150 → 45 lines; new `routers/{health,evidence,rag}.py`, `services.py` singletons, `logging_setup.py`.
+- ✅ **E0.9** Architecture doc — [ARCHITECTURE.md](ARCHITECTURE.md) codifies layer contracts, tenant invariant, config properties inventory, exception hierarchy, MDC keys, "add a new provider in 10 lines" walkthrough.
+- ✅ **Frontend captions module** — [shared/captions/captions.ts](../frontend/compliance-ui/src/app/shared/captions/captions.ts) holds every user-visible string. 11 pages migrated to reference it. Path alias `@captions` added.
+- ✅ **Dashboard layout** — Evidence gaps + Recent evidence cards now stacked vertically.
+- ✅ **All-in-one appliance** — new `Dockerfile.appliance` builds s6-supervised image (postgres + minio + backend + ai + nginx in one container). 1.45 GB after layer split + `chown -R` de-dup.
+- ✅ **Docker Hub 0.5.0** — backend, ai-service, frontend all live. Appliance push blocked by Docker Hub network flakes; local image `syncpoint-appliance:0.5.1` is ready.
+- 🟡 **Cold-start test** — Verified from a scratch directory: `curl` the two files, `docker compose up -d`, hit UI in < 30 s.
 
 ---
 
@@ -21,7 +41,8 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 | Spring Boot backend     | ✅ | Java 21, Boot 3.3.4, 30+ endpoints |
 | Angular 18 frontend     | ✅ | 9 feature pages behind nginx |
 | Python AI service       | ✅ | FastAPI + LLM/Embedding abstractions + RAG |
-| Docker Hub images       | ✅ | `adarshs1612/syncpoint-*:0.1.0` |
+| Docker Hub images       | ✅ | `adarshs1612/syncpoint-{backend,ai-service,frontend}:0.5.0` + `:latest` |
+| All-in-one appliance    | 🟡 | Image built locally as `0.5.1`; Docker Hub push blocked by network flakes on 1 GB layer |
 
 ---
 
