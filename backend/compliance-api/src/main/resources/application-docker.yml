@@ -1,0 +1,12 @@
+# Overrides for the `docker` profile (used when running via docker-compose).
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB:compliance}
+    username: ${POSTGRES_USER:compliance}
+    password: ${POSTGRES_PASSWORD:change-me}
+
+syncpoint:
+  storage:
+    endpoint: http://minio:9000
+  ai:
+    base-url: http://ai-service:8000

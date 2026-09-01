@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Syncpoint Compliance</title>
+    <base href="/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="SOC 2 evidence collection, mapping, and audit-package generation.">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#0b1220">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%236366f1'/><path d='M9 20 L16 8 L23 20 L19 20 L16 14 L13 20 Z' fill='white'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Round" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      .app-boot {
+        position: fixed; inset: 0;
+        display: grid; place-items: center;
+        background: #f5f7fb; color: #64748b;
+        font-family: 'Inter', system-ui, sans-serif; font-size: 14px;
+      }
+      .app-boot .spinner {
+        width: 24px; height: 24px; border-radius: 50%;
+        border: 2px solid #e2e8f0; border-top-color: #6366f1;
+        animation: spin 720ms linear infinite;
+        margin-right: 12px;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .app-boot span { display: flex; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <app-root>
+      <div class="app-boot"><span><span class="spinner"></span>Loading Syncpoint…</span></div>
+    </app-root>
+  </body>
+</html>

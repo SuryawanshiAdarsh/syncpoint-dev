@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -eu
+
+/appliance/scripts/init-postgres.sh
+
+exec s6-setuidgid postgres \
+    /usr/lib/postgresql/15/bin/postgres \
+        -D "$PGDATA" \
+        -c listen_addresses=127.0.0.1 \
+        -c port=5432 \
+        -c max_connections=50 \
+        -c shared_buffers=128MB

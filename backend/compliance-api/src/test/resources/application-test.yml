@@ -1,0 +1,18 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+syncpoint:
+  jwt:
+    secret: test-secret-that-is-definitely-long-enough-32bytes-and-then-some
+    access-token-expiration: PT15M
+    refresh-token-expiration: P1D
+    issuer: syncpoint-compliance-test
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN

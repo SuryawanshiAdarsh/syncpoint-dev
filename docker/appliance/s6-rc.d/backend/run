@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -eu
+
+for _ in $(seq 1 60); do
+    if pg_isready -h 127.0.0.1 -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -q; then
+        break
+    fi
+    sleep 1
+done
+
+MK=/var/lib/syncpoint/secrets/master.key
+if [ ! -s "$MK" ]; then
+    mkdir -p /var/lib/syncpoint/secrets
+    head -c 32 /dev/urandom | base64 > "$MK"
+    chmod 600 "$MK"
+    chown app:app "$MK"
+fi
+export SECRET_STORE_MASTER_KEY="$(cat "$MK")"
+
+export SPRING_DATASOURCE_URL="jdbc:postgresql://127.0.0.1:5432/${POSTGRES_DB}"
+export SPRING_DATASOURCE_USERNAME="$POSTGRES_USER"
+export SPRING_DATASOURCE_PASSWORD="$POSTGRES_PASSWORD"
+export S3_ENDPOINT=http://127.0.0.1:9000
+export AI_SERVICE_URL=http://127.0.0.1:8000
+export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}"
+
+cd /opt/syncpoint/backend
+exec s6-setuidgid app java \
+    -XX:MaxRAMPercentage=60 \
+    -jar /opt/syncpoint/backend/app.jar

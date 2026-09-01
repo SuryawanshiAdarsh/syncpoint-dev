@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -eu
+
+mkdir -p /var/lib/syncpoint/minio
+chown -R app:app /var/lib/syncpoint/minio
+
+export MINIO_ROOT_USER="${S3_ACCESS_KEY}"
+export MINIO_ROOT_PASSWORD="${S3_SECRET_KEY}"
+
+exec s6-setuidgid app \
+    /usr/local/bin/minio server /var/lib/syncpoint/minio \
+        --address 127.0.0.1:9000 \
+        --console-address 127.0.0.1:9001

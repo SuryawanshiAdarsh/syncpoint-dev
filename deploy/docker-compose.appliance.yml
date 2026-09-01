@@ -1,0 +1,45 @@
+# One-container deployment of the full Syncpoint stack.
+# Runs postgres + minio + ai-service + backend + nginx inside a single image.
+#
+#   docker compose -f deploy/docker-compose.appliance.yml up -d
+#   open http://localhost:4200
+#
+# Data is persisted in the `syncpoint-data` named volume.
+# To rebuild locally instead of pulling: switch `image:` to `build:`.
+
+name: syncpoint-appliance
+
+services:
+  syncpoint:
+    image: adarshs1612/syncpoint-appliance:latest
+    container_name: syncpoint
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    environment:
+      # Override any of these to harden the pilot; the image ships with
+      # dev defaults so `docker run` works out-of-the-box.
+      POSTGRES_DB: compliance
+      POSTGRES_USER: compliance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-compliance-change-me}
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-use-a-long-random-secret-of-at-least-32-bytes}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minio-change-me-secret}
+      S3_BUCKET: ${S3_BUCKET:-evidence}
+      # LLM stays on the deterministic stub unless you plug in real keys.
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-stub-1}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-stub}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-stub-embed-1}
+    volumes:
+      - syncpoint-data:/var/lib/syncpoint
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4200/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 10
+
+volumes:
+  syncpoint-data:

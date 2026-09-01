@@ -1,0 +1,143 @@
+name: syncpoint
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: syncpoint-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: syncpoint-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: syncpoint-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  minio:
+    image: minio/minio:latest
+    container_name: syncpoint-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  # One-shot: creates the evidence bucket, then exits.
+  minio-init:
+    image: minio/mc:latest
+    container_name: syncpoint-minio-init
+    depends_on:
+      - minio
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        until /usr/bin/mc alias set local http://minio:9000 "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}"; do
+          echo 'waiting for minio...'
+          sleep 2
+        done
+        /usr/bin/mc mb --ignore-existing "local/$${S3_BUCKET}"
+        echo "bucket ready: $${S3_BUCKET}"
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend/compliance-api
+    container_name: syncpoint-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET}
+      AI_SERVICE_URL: http://ai-service:8000
+      SECRET_STORE_MASTER_KEY: ${SECRET_STORE_MASTER_KEY:-}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/liveness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: syncpoint-ai
+    restart: unless-stopped
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-stub-1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-stub-embed-1}
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+
+  frontend:
+    build:
+      context: ./frontend/compliance-ui
+    container_name: syncpoint-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "4200:4200"
+
+volumes:
+  postgres-data:
+  redis-data:
+  qdrant-data:
+  minio-data:

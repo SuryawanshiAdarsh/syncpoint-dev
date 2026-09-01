@@ -1,0 +1,126 @@
+name: syncpoint
+
+# Deployable Compose file that pulls prebuilt images from Docker Hub.
+# Usage:
+#   cp .env.example .env
+#   docker compose -f docker-compose.hub.yml up -d
+#
+# Requires: Docker Engine 24+ / Docker Desktop.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: syncpoint-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-compliance}
+      POSTGRES_USER: ${POSTGRES_USER:-compliance}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: syncpoint-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: syncpoint-qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  minio:
+    image: minio/minio:latest
+    container_name: syncpoint-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minio}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-change-me-minio-secret}
+    ports:
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: syncpoint-minio-init
+    depends_on: [minio]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
+      S3_BUCKET: ${S3_BUCKET:-evidence}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        until /usr/bin/mc alias set local http://minio:9000 "$${S3_ACCESS_KEY}" "$${S3_SECRET_KEY}"; do
+          echo 'waiting for minio...'
+          sleep 2
+        done
+        /usr/bin/mc mb --ignore-existing "local/$${S3_BUCKET}"
+    restart: "no"
+
+  backend:
+    image: adarshs1612/syncpoint-backend:0.1.0
+    container_name: syncpoint-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_DB: ${POSTGRES_DB:-compliance}
+      POSTGRES_USER: ${POSTGRES_USER:-compliance}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-use-a-long-random-secret-of-at-least-32-bytes}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-change-me-minio-secret}
+      S3_BUCKET: ${S3_BUCKET:-evidence}
+      AI_SERVICE_URL: http://ai-service:8000
+      SECRET_STORE_MASTER_KEY: ${SECRET_STORE_MASTER_KEY:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/liveness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  ai-service:
+    image: adarshs1612/syncpoint-ai-service:0.1.0
+    container_name: syncpoint-ai
+    restart: unless-stopped
+    depends_on: [qdrant]
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-stub-1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-stub-embed-1}
+      QDRANT_URL: http://qdrant:6333
+
+  frontend:
+    image: adarshs1612/syncpoint-frontend:0.4.0
+    container_name: syncpoint-frontend
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "4200:4200"
+
+volumes:
+  postgres-data:
+  redis-data:
+  qdrant-data:
+  minio-data:

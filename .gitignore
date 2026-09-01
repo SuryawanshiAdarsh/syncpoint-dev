@@ -1,0 +1,69 @@
+# --- Environment ---
+.env
+.env.local
+.env.*.local
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editors / IDE ---
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+.factorypath
+
+# --- Java / Maven ---
+target/
+*.class
+*.jar
+*.war
+*.ear
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+build/
+out/
+hs_err_pid*
+replay_pid*
+
+# --- Node / Angular ---
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+coverage/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Docker / infra ---
+docker-compose.override.yml
+
+# --- Local storage / evidence (never commit real evidence) ---
+storage/*
+!storage/.gitkeep
+
+# --- Logs ---
+logs/
+*.log

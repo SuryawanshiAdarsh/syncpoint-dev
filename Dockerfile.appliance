@@ -1,0 +1,124 @@
+# syntax=docker/dockerfile:1.7
+# ---------------------------------------------------------------------------
+# Syncpoint all-in-one appliance image.
+#
+# Runs postgres, minio, ai-service, backend, and nginx (which fronts the
+# Angular UI and reverse-proxies /api and /actuator to the backend) inside a
+# single container, supervised by s6-overlay v3.
+#
+# Qdrant is intentionally omitted — the ai-service falls back to its
+# in-memory vector store when QDRANT_URL is unreachable, which is fine for
+# pilot/demo installs and cuts ~150 MB from the image.
+#
+# Ports:  4200 (nginx front door — the only port exposed)
+# Volume: /var/lib/syncpoint  (postgres data, minio data, secret store key)
+# ---------------------------------------------------------------------------
+
+# ---------- Stage 1: build backend jar ----------
+FROM maven:3.9-eclipse-temurin-21 AS backend-build
+WORKDIR /work
+COPY backend/compliance-api/pom.xml .
+COPY backend/compliance-api/src src
+RUN --mount=type=cache,target=/root/.m2 mvn -B -DskipTests package
+
+# ---------- Stage 2: build frontend ----------
+FROM node:20-alpine AS frontend-build
+WORKDIR /work
+COPY frontend/compliance-ui/package.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --no-audit --no-fund --loglevel=error
+COPY frontend/compliance-ui/ .
+RUN npm run build
+
+# ---------- Stage 3: runtime ----------
+FROM python:3.12-slim-bookworm
+
+ARG S6_OVERLAY_VERSION=3.2.0.2
+ARG MINIO_RELEASE=RELEASE.2024-11-07T00-52-20Z
+ARG MC_RELEASE=RELEASE.2024-11-05T11-29-45Z
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    S6_KEEP_ENV=1 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2 \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=120000 \
+    PGDATA=/var/lib/syncpoint/postgres \
+    POSTGRES_DB=compliance \
+    POSTGRES_USER=compliance \
+    POSTGRES_PASSWORD=compliance-change-me \
+    S3_ACCESS_KEY=minio \
+    S3_SECRET_KEY=minio-change-me-secret \
+    S3_BUCKET=evidence \
+    JWT_SECRET=change-me-please-use-a-long-random-secret-of-at-least-32-bytes \
+    LLM_PROVIDER=stub \
+    EMBEDDING_PROVIDER=stub \
+    QDRANT_URL=http://127.0.0.1:6333 \
+    AI_SERVICE_URL=http://127.0.0.1:8000 \
+    JAVA_HOME=/opt/java/openjdk \
+    PATH=/opt/java/openjdk/bin:/usr/lib/postgresql/15/bin:$PATH
+
+# --- OS packages: postgres, nginx, tools ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl xz-utils gnupg lsb-release procps sudo \
+      postgresql-15 postgresql-client-15 \
+      nginx \
+ && rm -rf /var/lib/apt/lists/*
+
+# --- Temurin JRE 21 (backend requires Java 21) ---
+COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
+
+# --- MinIO server + client ---
+RUN curl -fsSL -o /usr/local/bin/minio \
+      "https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_RELEASE}" \
+ && curl -fsSL -o /usr/local/bin/mc \
+      "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.${MC_RELEASE}" \
+ && chmod +x /usr/local/bin/minio /usr/local/bin/mc
+
+# --- s6-overlay v3 ---
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz /tmp/s6-noarch.tar.xz
+ADD https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz /tmp/s6-x86_64.tar.xz
+RUN tar -C / -Jxpf /tmp/s6-noarch.tar.xz \
+ && tar -C / -Jxpf /tmp/s6-x86_64.tar.xz \
+ && rm /tmp/s6-*.tar.xz
+
+# --- Non-root runtime user for the JVM and Python processes ---
+RUN groupadd -r app && useradd -r -g app -d /opt/syncpoint -s /usr/sbin/nologin app
+
+# --- Backend jar ---
+RUN mkdir -p /opt/syncpoint/backend
+COPY --from=backend-build /work/target/app.jar /opt/syncpoint/backend/app.jar
+
+# --- Frontend static bundle (served by nginx) ---
+RUN mkdir -p /usr/share/nginx/html
+COPY --from=frontend-build /work/dist/compliance-ui/browser /usr/share/nginx/html
+
+# --- AI service ---
+RUN mkdir -p /opt/syncpoint/ai-service \
+ && python3 -m venv /opt/syncpoint/ai-service/venv
+COPY ai-service/requirements.txt /tmp/ai-req.txt
+RUN /opt/syncpoint/ai-service/venv/bin/pip install --no-cache-dir --disable-pip-version-check -r /tmp/ai-req.txt \
+ && rm /tmp/ai-req.txt
+COPY ai-service/app /opt/syncpoint/ai-service/app
+
+# --- s6 service definitions + nginx config + init scripts ---
+COPY docker/appliance/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+COPY docker/appliance/nginx.conf /etc/nginx/sites-available/default
+COPY docker/appliance/scripts/ /appliance/scripts/
+RUN find /etc/s6-overlay/s6-rc.d /appliance/scripts -type f -exec sed -i 's/\r$//' {} + \
+ && find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name up \) -exec chmod +x {} + \
+ && chmod +x /appliance/scripts/*.sh \
+ && rm -f /etc/nginx/sites-enabled/default \
+ && ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
+ && chown -R app:app /opt/syncpoint
+
+# --- Persistent state root ---
+RUN mkdir -p /var/lib/syncpoint /var/lib/syncpoint/postgres /var/lib/syncpoint/minio /var/lib/syncpoint/secrets \
+ && chown -R postgres:postgres /var/lib/syncpoint/postgres \
+ && chown -R app:app /var/lib/syncpoint/minio /var/lib/syncpoint/secrets
+
+EXPOSE 4200
+VOLUME ["/var/lib/syncpoint"]
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=10 \
+    CMD curl -fsS http://localhost:4200/actuator/health/liveness || exit 1
+
+ENTRYPOINT ["/init"]
