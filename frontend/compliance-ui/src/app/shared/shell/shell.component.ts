@@ -9,6 +9,7 @@ import { ApiService } from '../../core/api/api.service';
 import { TokenStore } from '../../core/auth/token-store.service';
 import { Me } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
+import { environment } from '@env/environment';
 
 interface NavItem { path: string; label: string; icon: string; }
 interface NavSection { title: string; items: NavItem[]; }
@@ -171,8 +172,8 @@ interface NavSection { title: string; items: NavItem[]; }
             </svg>
           </div>
           <div class="brand-text">
-            <span class="name">Syncpoint</span>
-            <span class="plan">Compliance · MVP</span>
+            <span class="name">{{ c.common.appName }}</span>
+            <span class="plan">{{ c.shell.brandPlan }}</span>
           </div>
         </div>
 
@@ -189,7 +190,7 @@ interface NavSection { title: string; items: NavItem[]; }
 
         <div class="footer">
           <div class="status-line"><span class="dot"></span> All systems operational</div>
-          <div style="margin-top:4px;">v0.1.0 · SOC 2 (DEMO)</div>
+          <div style="margin-top:4px;">v{{ appVersion }} · SOC 2 (DEMO)</div>
         </div>
       </aside>
 
@@ -237,6 +238,7 @@ interface NavSection { title: string; items: NavItem[]; }
 })
 export class ShellComponent implements OnInit {
   readonly c = CAPTIONS;
+  readonly appVersion = environment.appVersion;
   private readonly api = inject(ApiService);
   private readonly store = inject(TokenStore);
   private readonly router = inject(Router);

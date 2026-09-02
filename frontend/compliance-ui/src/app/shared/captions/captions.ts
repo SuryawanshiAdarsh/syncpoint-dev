@@ -31,7 +31,7 @@ export const CAPTIONS = {
     sidebarSectionEvidence: 'Evidence',
     sidebarSectionAutomation: 'Automation',
     sidebarSectionAudit: 'Audit',
-    brandPlan: 'MVP · SOC 2',
+    brandPlan: 'Compliance · MVP',
     navDashboard: 'Dashboard',
     navControls: 'Controls',
     navEvidence: 'Evidence',

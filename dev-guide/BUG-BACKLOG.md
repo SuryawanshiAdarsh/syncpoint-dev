@@ -9,6 +9,9 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 |---|---|
 | [BUG-001](#bug-001-review-queue-action-column-overflows-the-table) | Open |
 | [BUG-002](#bug-002-review-queue-open-in-evidence-does-not-deep-link-to-the-row) | Open |
+| [BUG-003](#bug-003-soc-2-badge-is-hardcoded-instead-of-read-from-the-orgs-active-framework) | Open |
+| [BUG-004](#bug-004-demo-label-is-hardcoded-instead-of-driven-by-environment-config) | Open |
+| [BUG-005](#bug-005-no-versioned-acceptance-tracking-for-legal-documents) | Open |
 
 ---
 
@@ -91,3 +94,67 @@ a resolvable control ID for mapped items (only `mappingCount`), and on EXPIRING 
 
 ### Why deferred
 User asked to log this for later rather than implement Option A/B in this pass.
+
+---
+
+## BUG-003: SOC 2 badge is hardcoded instead of read from the org's active framework
+
+- **Severity**: P2 (produces an incorrect compliance claim for any non-SOC-2 tenant)
+- **Area**: Frontend — [shell.component.ts](../frontend/compliance-ui/src/app/shared/shell/shell.component.ts), [login.component.ts](../frontend/compliance-ui/src/app/features/login/login.component.ts), [register.component.ts](../frontend/compliance-ui/src/app/features/register/register.component.ts)
+- **Found**: 2026-09-02, during a discussion on where product name/version/legal info should live.
+
+### Symptom
+The string `SOC 2 (DEMO)` is hardcoded in three components. `frameworks` is already a real,
+per-organization table (`code`, `name`, `version`, `active`) — an org running ISO 27001 instead of
+SOC 2 would still see a "SOC 2" badge, which is a false compliance claim, not just a cosmetic bug.
+
+### Proposed fix
+Fetch the org's active framework(s) (e.g. via `GET /api/v1/organizations/current` or a small
+`/frameworks?active=true` call already backing the Controls page) and render the real code(s)
+instead of a literal string.
+
+### Why deferred
+Logged per user request; not scheduled for this pass.
+
+---
+
+## BUG-004: "(DEMO)" label is hardcoded instead of driven by environment config
+
+- **Severity**: P3
+- **Area**: Frontend — same three components as BUG-003
+- **Found**: 2026-09-02, same discussion as BUG-003.
+
+### Symptom
+`(DEMO)` is baked into the template string rather than reflecting whether the running instance is
+actually a demo/trial deployment vs. a paid production tenant.
+
+### Proposed fix
+Surface an environment/deployment flag from the backend (e.g. on the `/me` or a small `/config`
+response) and drive the label from that, so a production deployment doesn't accidentally ship the
+literal text "(DEMO)".
+
+### Why deferred
+Logged per user request; not scheduled for this pass.
+
+---
+
+## BUG-005: No versioned acceptance tracking for legal documents
+
+- **Severity**: P1 for go-to-market, not a defect in the current MVP
+- **Area**: Backend (new), ties into [LEGAL.md](LEGAL.md)
+- **Found**: 2026-09-02, same discussion as BUG-003/BUG-004.
+
+### Symptom
+There is no record of which version of the Terms of Service / DPA / Privacy Policy a customer
+organization has accepted, or when. This is a real requirement before signing paying customers
+(and ironically the exact kind of evidence Syncpoint itself helps other companies track for SOC 2).
+
+### Proposed fix
+A `legal_acceptances` table (org/user FK, document type, document version, accepted-at timestamp)
+plus versioned storage of the legal document content (DB rows or versioned static assets referenced
+by a DB pointer), so "customer X accepted version 3 of the DPA on date Y" is provable.
+
+### Why deferred
+This is a feature, not a bug — logged here per user request, but should graduate to
+[ROADMAP.md](ROADMAP.md) / [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) once scheduled,
+since it gates real customer contracts rather than being a defect in existing behavior.

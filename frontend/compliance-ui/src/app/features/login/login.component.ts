@@ -209,7 +209,7 @@ import { CAPTIONS } from '@captions';
           </div>
         </div>
 
-        <div class="foot">© Syncpoint · SOC 2 (DEMO)</div>
+        <div class="foot">© {{ c.common.appName }} · SOC 2 (DEMO)</div>
       </div>
 
       <div class="form-wrap">

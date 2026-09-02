@@ -113,7 +113,7 @@ import { CAPTIONS } from '@captions';
           <div class="step"><span class="num">4</span><span class="txt"><strong>Watch coverage grow</strong> as the AI suggests mappings and you confirm what fits.</span></div>
         </div>
 
-        <div class="foot">© Syncpoint · SOC 2 (DEMO)</div>
+        <div class="foot">© {{ c.common.appName }} · SOC 2 (DEMO)</div>
       </div>
 
       <div class="form-wrap">
