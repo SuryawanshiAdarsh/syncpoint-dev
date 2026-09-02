@@ -75,8 +75,8 @@ Docs completeness:      ██████████░░░░░  75 %
 Phases stack, but items *within* a phase can be parallel where noted.
 
 ```
-Phase A  →  Phase B  →  Phase C  →  Phase D  →  Phase E
-(now)     (M1-M10)     (deploy)    (sell)     (scale)
+Phase A  →  A.5  →  Phase B  →  Phase C  →  Phase D  →  Phase E
+(now)     (UX)     (M1-M10)     (deploy)    (sell)     (scale)
 ```
 
 ### Phase A — Immediate / next 1–2 weeks (before starting M1)
@@ -94,7 +94,22 @@ Phase A  →  Phase B  →  Phase C  →  Phase D  →  Phase E
 
 **Exit criteria**: repo pushes green to `main`, appliance image is on Docker Hub, another engineer can `git clone && docker compose up -d` and be productive.
 
-### Phase B — MVP completion (weeks 1–8)
+### Phase A.5 — Core flows wiring (1 week, between A and B)
+
+**Goal**: make the four core end-to-end flows (onboarding, dashboard, evidence mapping, control detail) *actually* work — click → thing happens → user sees the result.
+
+Detailed in [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md). Summary:
+
+- **Day 1**: Backend endpoints (organizations/current + onboarding complete, DTO extensions for mappings, DELETE mapping) + onboarding gate wired
+- **Day 2**: Dashboard re-fetches on nav-in; evidence upload/map/analyze/approve all toast + refresh
+- **Day 3**: Control-detail — mapping type badges, AI Analysis panel, Confirm/Reject buttons, Upload-evidence CTA
+- **Day 4**: End-to-end walkthrough, fix regressions, tag `0.6.0`, push
+
+**M1** (onboarding gate from MVP-COMPLETION-PLAN.md) is absorbed by Day 1 of this sprint. Phase B then continues from M2.
+
+**Exit criteria**: a brand-new user can complete signup → onboarding → upload → AI analyze → confirm → see COVERED on the dashboard without asking "did that work?"
+
+### Phase B — MVP completion (weeks 2–8)
 
 **Goal**: deliver everything in [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md).
 

@@ -12,10 +12,15 @@ Every planning, architecture, and status document lives here. If you're new to t
 |---|---|
 | *Where is the project today?* | [STATUS.md](STATUS.md) |
 | *What are the technical milestones (M1 → M10)?* | [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md) |
+| *Which 4-day sprint wires the core flows (onboarding, dashboard, mapping, control detail)?* | [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md) |
 | *What non-code work is needed for a first paying customer?* | [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) |
+| *What legal docs do I need before signing a customer?* | [LEGAL.md](LEGAL.md) |
+| *How do I actually take money — entity, bank, pricing, invoicing?* | [BUSINESS.md](BUSINESS.md) |
+| *How do I deploy this to a public URL for a real customer?* | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | *How is the code organized?* | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | *How is the frontend organized?* | [FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md) |
 | *What phases has the project already been through?* | [BUILD-PLAN.md](BUILD-PLAN.md) |
+| *What known bugs are deliberately not fixed yet?* | [BUG-BACKLOG.md](BUG-BACKLOG.md) |
 | *What is the product, in plain English?* | [../PRODUCT.md](../PRODUCT.md) |
 | *What is the MVP-completion spec?* | [../PROJECT_SPEC3.md](../PROJECT_SPEC3.md) |
 
@@ -28,6 +33,7 @@ Every planning, architecture, and status document lives here. If you're new to t
 | Layer or config contract changes | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | First customer feedback | [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md), possibly [PRODUCT.md](../PRODUCT.md) |
 | Weekly cadence (see [ROADMAP.md](ROADMAP.md) §8) | [STATUS.md](STATUS.md) |
+| Known issue found but deferred | [BUG-BACKLOG.md](BUG-BACKLOG.md) |
 
 ## The full reading order (for a new contributor)
 

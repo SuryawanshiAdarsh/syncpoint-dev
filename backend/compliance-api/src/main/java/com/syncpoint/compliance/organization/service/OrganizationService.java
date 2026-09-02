@@ -1,5 +1,6 @@
 package com.syncpoint.compliance.organization.service;
 
+import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.service.AuditService;
 import com.syncpoint.compliance.auth.entity.User;
 import com.syncpoint.compliance.auth.repository.UserRepository;
@@ -97,7 +98,7 @@ public class OrganizationService {
         }
         OrganizationMember membership = memberRepository.save(new OrganizationMember(orgId, user.getId(), req.role()));
 
-        auditService.record(orgId, TenantContext.require().userId(), "USER_CREATED", "organization_member", membership.getId());
+        auditService.record(orgId, TenantContext.require().userId(), AuditEvents.USER_CREATED, "organization_member", membership.getId());
 
         return new MemberResponse(membership.getId(), user.getId(), user.getEmail(), user.getName(),
                 membership.getRole(), membership.getCreatedAt());
@@ -125,7 +126,7 @@ public class OrganizationService {
         member.setRole(req.role());
         OrganizationMember saved = memberRepository.save(member);
 
-        auditService.record(orgId, actor.userId(), "USER_ROLE_CHANGED", "organization_member", member.getId());
+        auditService.record(orgId, actor.userId(), AuditEvents.USER_ROLE_CHANGED, "organization_member", member.getId());
 
         User user = userRepository.findById(member.getUserId()).orElse(null);
         return new MemberResponse(saved.getId(), saved.getUserId(),

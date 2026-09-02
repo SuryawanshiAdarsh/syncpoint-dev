@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -97,14 +98,19 @@ public class EvidenceService {
             versionRepo.findFirstByEvidenceIdOrderByVersionDesc(e.getId())
                     .ifPresent(v -> latest.put(e.getId(), v));
         }
-        return all.stream().map(e -> toResponse(e, latest.get(e.getId()))).toList();
+        Map<UUID, List<EvidenceControlMapping>> mappingsByEvidence = mappingRepo.findByOrganizationId(orgId).stream()
+                .collect(Collectors.groupingBy(EvidenceControlMapping::getEvidenceId));
+        return all.stream()
+                .map(e -> toResponse(e, latest.get(e.getId()), mappingsByEvidence.getOrDefault(e.getId(), List.of())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public EvidenceResponse get(UUID id) {
         Evidence e = requireOwned(id);
         EvidenceVersion v = versionRepo.findFirstByEvidenceIdOrderByVersionDesc(e.getId()).orElse(null);
-        return toResponse(e, v);
+        List<EvidenceControlMapping> mappings = mappingRepo.findByEvidenceIdAndOrganizationId(id, e.getOrganizationId());
+        return toResponse(e, v, mappings);
     }
 
     @Transactional
@@ -167,7 +173,7 @@ public class EvidenceService {
                 AuditEvents.EVIDENCE_CREATED, "evidence", evidence.getId(),
                 Map.of("source", "MANUAL_UPLOAD", "sizeBytes", bytes.length, "contentHash", hash));
 
-        return toResponse(evidence, version);
+        return toResponse(evidence, version, List.of());
     }
 
     @Transactional
@@ -279,8 +285,13 @@ public class EvidenceService {
         }
     }
 
-    private EvidenceResponse toResponse(Evidence e, EvidenceVersion v) {
+    private EvidenceResponse toResponse(Evidence e, EvidenceVersion v, List<EvidenceControlMapping> mappings) {
         EvidenceResponse.FreshnessState freshness = computeFreshness(e.getExpiresAt());
+        BigDecimal lowestConfidence = mappings.stream()
+                .map(EvidenceControlMapping::getConfidence)
+                .filter(java.util.Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(null);
         return new EvidenceResponse(
                 e.getId(), e.getName(), e.getDescription(),
                 e.getSourceType(), e.getSourceSystem(), e.getStatus(), freshness,
@@ -289,7 +300,8 @@ public class EvidenceService {
                 v == null ? null : v.getContentHash(),
                 v == null ? null : v.getSizeBytes(),
                 v == null ? null : v.getMimeType(),
-                e.getCreatedAt());
+                e.getCreatedAt(),
+                !mappings.isEmpty(), mappings.size(), lowestConfidence);
     }
 
     private static EvidenceResponse.FreshnessState computeFreshness(Instant expiresAt) {

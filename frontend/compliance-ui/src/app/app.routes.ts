@@ -19,6 +19,7 @@ export const routes: Routes = [
     loadComponent: () => import('./shared/shell/shell.component').then(m => m.ShellComponent),
     children: [
       { path: 'dashboard',    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      { path: 'review-queue', loadComponent: () => import('./features/review-queue/review-queue.component').then(m => m.ReviewQueueComponent) },
       { path: 'controls',     loadComponent: () => import('./features/controls/controls.component').then(m => m.ControlsComponent) },
       { path: 'controls/:id', loadComponent: () => import('./features/controls/control-detail.component').then(m => m.ControlDetailComponent) },
       { path: 'evidence',     loadComponent: () => import('./features/evidence/evidence.component').then(m => m.EvidenceComponent) },

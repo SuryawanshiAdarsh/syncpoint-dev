@@ -6,6 +6,13 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
 import { CAPTIONS } from '@captions';
+import {
+  EVIDENCE_STATUS,
+  controlStatusClass as _controlStatusClass,
+  evidenceStatusClass as _evStatusClass,
+  evidenceSourceIcon as _sourceIcon,
+  evidenceSourceLabel as _sourceLabel,
+} from '@constants';
 import { Control, Evidence } from '../../core/api/api.types';
 
 @Component({
@@ -155,12 +162,12 @@ export class ControlDetailComponent implements OnInit {
     });
   }
 
-  approvedCount(): number { return this.evidence().filter(e => e.status === 'APPROVED').length; }
-  underReviewCount(): number { return this.evidence().filter(e => e.status === 'UNDER_REVIEW' || e.status === 'COLLECTED').length; }
+  approvedCount(): number { return this.evidence().filter(e => e.status === EVIDENCE_STATUS.APPROVED).length; }
+  underReviewCount(): number { return this.evidence().filter(e => e.status === EVIDENCE_STATUS.UNDER_REVIEW || e.status === EVIDENCE_STATUS.COLLECTED).length; }
 
-  statusClass(s: string): string { return { COVERED: 'covered', PARTIAL: 'partial', MISSING: 'missing', NEEDS_REVIEW: 'needs-review' }[s] ?? ''; }
-  statusLabel(s: string): string { return { COVERED: 'Covered', PARTIAL: 'Partial', MISSING: 'Missing', NEEDS_REVIEW: 'Needs review' }[s] ?? s; }
-  evStatusClass(s: string): string { return { APPROVED: 'approved', COLLECTED: 'pending', UNDER_REVIEW: 'running', REJECTED: 'rejected', EXPIRED: 'error' }[s] ?? ''; }
-  sourceIcon(s: string): string { return { MANUAL_UPLOAD: 'upload_file', GITHUB: 'code', AWS: 'cloud', JIRA: 'bug_report', GOOGLE_WORKSPACE: 'groups' }[s] ?? 'description'; }
-  sourceLabel(s: string): string { return { MANUAL_UPLOAD: 'Manual', GITHUB: 'GitHub', AWS: 'AWS', JIRA: 'Jira', GOOGLE_WORKSPACE: 'Google' }[s] ?? s; }
+  statusClass(s: string): string { return _controlStatusClass(s); }
+  statusLabel(s: string): string { return (CAPTIONS.status as Record<string, string>)[s] ?? s; }
+  evStatusClass(s: string): string { return _evStatusClass(s); }
+  sourceIcon(s: string): string { return _sourceIcon(s); }
+  sourceLabel(s: string): string { return _sourceLabel(s); }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,14 +9,35 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { ApiService } from '../../core/api/api.service';
-import { Control, Evidence } from '../../core/api/api.types';
+import { Control, Evidence, EvidenceSourceType, FreshnessState } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
+import { EVIDENCE_SOURCE, FRESHNESS, evidenceSourceLabel as _sourceLabel } from '@constants';
+import {
+  UiPageHeaderComponent,
+  UiCardComponent,
+  UiEmptyStateComponent,
+  UiSearchComponent,
+  UiToolbarComponent,
+  UiFilterChipsComponent,
+  UiEvidenceStatusBadgeComponent,
+  UiFreshnessBadgeComponent,
+  UiSourcePillComponent,
+  UiFilterChip,
+} from '@ui';
+
+type StatusChipKey = 'NEEDS_ATTENTION' | 'ALL' | 'APPROVED';
+type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
 
 @Component({
   standalone: true,
   selector: 'app-evidence',
-  imports: [CommonModule, FormsModule, MatButtonModule,
-            MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatMenuModule],
+  imports: [
+    CommonModule, FormsModule, MatButtonModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatMenuModule,
+    UiPageHeaderComponent, UiCardComponent, UiEmptyStateComponent,
+    UiSearchComponent, UiToolbarComponent, UiFilterChipsComponent,
+    UiEvidenceStatusBadgeComponent, UiFreshnessBadgeComponent, UiSourcePillComponent,
+  ],
   styles: [`
     /* Drop-zone upload */
     .dropzone {
@@ -60,16 +81,12 @@ import { CAPTIONS } from '@captions';
     .name-cell .name { font-weight: 500; }
     .name-cell .sub { color: var(--color-text-muted); font-size: 12px; margin-top: 2px; }
 
-    .source-pill {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 3px 10px;
-      background: var(--color-surface-muted);
-      border: 1px solid var(--color-border);
-      border-radius: 999px;
-      font-size: 12px;
-      color: var(--color-text-secondary);
+    .source-cell { display: flex; align-items: center; gap: 8px; }
+    .unmapped-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--color-warning, #f59e0b);
+      flex-shrink: 0;
     }
-    .source-pill mat-icon { font-size: 12px; height: 12px; width: 12px; }
 
     .toast {
       display: flex; align-items: center; gap: 10px;
@@ -85,24 +102,28 @@ import { CAPTIONS } from '@captions';
     .toast.error { background: var(--color-danger-soft); border-color: var(--color-danger-border); color: var(--color-danger-text); }
 
     .row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+
+    .count-line {
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+      padding: 12px var(--space-6);
+    }
+    .pager {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      padding: 14px var(--space-6);
+      border-top: 1px solid var(--color-divider);
+    }
   `],
   template: `
     <div class="page">
-      <div class="page-header">
-        <div>
-          <div class="eyebrow">{{ c.evidence.eyebrow }}</div>
-          <h1>{{ c.evidence.title }}</h1>
-          <p class="subtitle">{{ c.evidence.subtitle }}</p>
-        </div>
-      </div>
+      <ui-page-header
+        [eyebrow]="c.evidence.eyebrow"
+        [title]="c.evidence.title"
+        [subtitle]="c.evidence.subtitle">
+      </ui-page-header>
 
       <!-- Upload zone -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Upload evidence</h2>
-          <span class="muted small">PDF, CSV, JSON, TXT, DOCX, XLSX · max 50 MB</span>
-        </div>
-
+      <ui-card [title]="c.evidence.uploadCardTitle" [caption]="c.evidence.uploadCardCaption">
         <label class="dropzone" [class.has-file]="!!file" [class.dragover]="dragover()"
                (dragover)="onDragOver($event)" (dragleave)="dragover.set(false)"
                (drop)="onDrop($event)">
@@ -135,25 +156,60 @@ import { CAPTIONS } from '@captions';
         <div *ngIf="uploadError()" class="toast error">
           <mat-icon>error_outline</mat-icon>{{ uploadError() }}
         </div>
-      </div>
+      </ui-card>
+
+      <!-- Filters -->
+      <ui-toolbar style="display:block;margin-top: var(--space-6);">
+        <ui-search leading
+                   [value]="search()"
+                   (valueChange)="onSearchChange($event)"
+                   [placeholder]="c.evidence.searchPlaceholder">
+        </ui-search>
+        <mat-form-field trailing appearance="outline" style="width:170px;" subscriptSizing="dynamic">
+          <mat-label>{{ c.evidence.filterSource }}</mat-label>
+          <mat-select [ngModel]="sourceFilter()" (ngModelChange)="onSourceChange($event)">
+            <mat-option value="">{{ c.evidence.filterAllSources }}</mat-option>
+            <mat-option *ngFor="let s of sourceOptions" [value]="s">{{ sourceLabel(s) }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field trailing appearance="outline" style="width:160px;" subscriptSizing="dynamic">
+          <mat-label>{{ c.evidence.filterFreshness }}</mat-label>
+          <mat-select [ngModel]="freshnessFilter()" (ngModelChange)="onFreshnessChange($event)">
+            <mat-option value="">{{ c.evidence.filterAllFreshness }}</mat-option>
+            <mat-option *ngFor="let f of freshnessOptions" [value]="f">{{ freshnessLabel(f) }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field trailing appearance="outline" style="width:140px;" subscriptSizing="dynamic">
+          <mat-label>{{ c.evidence.filterMapped }}</mat-label>
+          <mat-select [ngModel]="mappedFilter()" (ngModelChange)="onMappedChange($event)">
+            <mat-option value="">{{ c.evidence.filterAllMapped }}</mat-option>
+            <mat-option value="MAPPED">{{ c.evidence.filterMappedOnly }}</mat-option>
+            <mat-option value="UNMAPPED">{{ c.evidence.filterUnmappedOnly }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </ui-toolbar>
+
+      <ui-filter-chips
+        [chips]="statusChips()"
+        [selected]="statusFilter()"
+        (selectedChange)="onStatusChipChange($event)"
+        style="display:block;margin-bottom: var(--space-4);">
+      </ui-filter-chips>
 
       <!-- All evidence -->
-      <div class="card" style="padding: 0;">
-        <div class="card-header" style="padding: 20px 24px;">
-          <h2>All evidence</h2>
-          <span class="muted small">{{ items().length }} artifact{{ items().length === 1 ? '' : 's' }}</span>
-        </div>
+      <ui-card padding="flush">
+        <div class="count-line">{{ c.evidence.countLine(filtered().length, items().length) }}</div>
 
-        <table class="data-table" *ngIf="items().length; else empty">
+        <table class="data-table" *ngIf="paged().length; else empty">
           <thead><tr>
-            <th style="padding-left:24px;">Name</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Freshness</th>
-            <th style="text-align:right;padding-right:24px;">Actions</th>
+            <th style="padding-left:24px;">{{ c.evidence.tableName }}</th>
+            <th>{{ c.evidence.tableSource }}</th>
+            <th>{{ c.evidence.tableStatus }}</th>
+            <th>{{ c.evidence.tableFreshness }}</th>
+            <th style="text-align:right;padding-right:24px;">{{ c.evidence.tableActions }}</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let e of items()">
+            <tr *ngFor="let e of paged()">
               <td style="padding-left:24px;">
                 <div class="name-cell">
                   <div class="file-icon-wrap"><mat-icon>{{ mimeIcon(e.mimeType) }}</mat-icon></div>
@@ -163,9 +219,14 @@ import { CAPTIONS } from '@captions';
                   </div>
                 </div>
               </td>
-              <td><span class="source-pill"><mat-icon>{{ sourceIcon(e.sourceType) }}</mat-icon>{{ sourceLabel(e.sourceType) }}</span></td>
-              <td><span class="badge" [class]="evStatusClass(e.status)">{{ e.status | titlecase }}</span></td>
-              <td><span class="badge" [class]="freshnessClass(e.freshness)">{{ e.freshness | titlecase }}</span></td>
+              <td>
+                <div class="source-cell">
+                  <ui-source-pill [source]="e.sourceType"></ui-source-pill>
+                  <span class="unmapped-dot" *ngIf="!e.mapped" title="Not mapped to a control"></span>
+                </div>
+              </td>
+              <td><ui-evidence-status-badge [status]="e.status"></ui-evidence-status-badge></td>
+              <td><ui-freshness-badge [freshness]="e.freshness"></ui-freshness-badge></td>
               <td style="padding-right:24px;">
                 <div class="row-actions">
                   <mat-form-field appearance="outline" style="width:180px;" subscriptSizing="dynamic">
@@ -191,14 +252,20 @@ import { CAPTIONS } from '@captions';
           </tbody>
         </table>
 
+        <div class="pager" *ngIf="filtered().length">
+          <button class="btn ghost sm" (click)="prevPage()" [disabled]="page() === 0">{{ c.evidence.pagePrev }}</button>
+          <span class="muted small">{{ c.evidence.pageIndicator(page() + 1, totalPages()) }}</span>
+          <button class="btn ghost sm" (click)="nextPage()" [disabled]="page() >= totalPages() - 1">{{ c.evidence.pageNext }}</button>
+        </div>
+
         <ng-template #empty>
-          <div class="empty">
-            <div class="icon-wrap"><mat-icon>upload_file</mat-icon></div>
-            <h3>No evidence uploaded yet</h3>
-            <p>Drop a file above or connect an integration to collect evidence automatically.</p>
-          </div>
+          <ui-empty-state
+            [icon]="items().length ? 'filter_alt_off' : 'upload_file'"
+            [title]="items().length ? c.evidence.emptyFilterTitle : c.evidence.emptyTitle"
+            [description]="items().length ? c.evidence.emptyFilterMessage : c.evidence.emptyMessage">
+          </ui-empty-state>
         </ng-template>
-      </div>
+      </ui-card>
 
       <div *ngIf="msg()" class="toast">
         <mat-icon>check_circle</mat-icon>{{ msg() }}
@@ -209,6 +276,10 @@ import { CAPTIONS } from '@captions';
 export class EvidenceComponent implements OnInit {
   readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
+
+  readonly sourceOptions = Object.values(EVIDENCE_SOURCE);
+  readonly freshnessOptions = Object.values(FRESHNESS);
+  readonly pageSize = 25;
 
   items = signal<Evidence[]>([]);
   controls = signal<Control[]>([]);
@@ -222,10 +293,76 @@ export class EvidenceComponent implements OnInit {
   dragover = signal(false);
   selectedControl: Record<string, string> = {};
 
+  search = signal('');
+  statusFilter = signal<StatusChipKey>('NEEDS_ATTENTION');
+  sourceFilter = signal<'' | EvidenceSourceType>('');
+  freshnessFilter = signal<'' | FreshnessState>('');
+  mappedFilter = signal<MappedFilter>('');
+  page = signal(0);
+
+  statusChips = computed<UiFilterChip[]>(() => {
+    const list = this.items();
+    const needsAttention = list.filter(e => e.status === 'COLLECTED' || e.status === 'UNDER_REVIEW').length;
+    const approved = list.filter(e => e.status === 'APPROVED').length;
+    return [
+      { key: 'NEEDS_ATTENTION', label: this.c.evidence.chipNeedsAttention, count: needsAttention, colorDot: '#f59e0b' },
+      { key: 'ALL',             label: this.c.evidence.chipAll,            count: list.length },
+      { key: 'APPROVED',        label: this.c.evidence.chipApproved,       count: approved, colorDot: '#10b981' },
+    ];
+  });
+
+  filtered = computed(() => {
+    const status = this.statusFilter();
+    const source = this.sourceFilter();
+    const freshness = this.freshnessFilter();
+    const mapped = this.mappedFilter();
+    const q = this.search().toLowerCase().trim();
+    return this.items().filter(e => {
+      if (status === 'NEEDS_ATTENTION' && !(e.status === 'COLLECTED' || e.status === 'UNDER_REVIEW')) return false;
+      if (status === 'APPROVED' && e.status !== 'APPROVED') return false;
+      if (source && e.sourceType !== source) return false;
+      if (freshness && e.freshness !== freshness) return false;
+      if (mapped === 'MAPPED' && !e.mapped) return false;
+      if (mapped === 'UNMAPPED' && e.mapped) return false;
+      if (q && !e.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  });
+
+  totalPages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
+
+  paged = computed(() => {
+    const start = this.page() * this.pageSize;
+    return this.filtered().slice(start, start + this.pageSize);
+  });
+
   ngOnInit(): void {
     this.reload();
     this.api.controls().subscribe(cs => this.controls.set(cs));
   }
+
+  onStatusChipChange(key: string): void {
+    this.statusFilter.set(key as StatusChipKey);
+    this.page.set(0);
+  }
+  onSourceChange(v: '' | EvidenceSourceType): void {
+    this.sourceFilter.set(v);
+    this.page.set(0);
+  }
+  onFreshnessChange(v: '' | FreshnessState): void {
+    this.freshnessFilter.set(v);
+    this.page.set(0);
+  }
+  onMappedChange(v: MappedFilter): void {
+    this.mappedFilter.set(v);
+    this.page.set(0);
+  }
+  onSearchChange(v: string): void {
+    this.search.set(v);
+    this.page.set(0);
+  }
+  prevPage(): void { this.page.update(p => Math.max(0, p - 1)); }
+  nextPage(): void { this.page.update(p => Math.min(this.totalPages() - 1, p + 1)); }
 
   fileChanged(files: FileList | null): void {
     this.file = files && files.length ? files[0] : null;
@@ -288,10 +425,10 @@ export class EvidenceComponent implements OnInit {
       .subscribe(() => { this.msg.set('Evidence approved.'); this.reload(); });
   }
 
-  freshnessClass(s: string): string { return { CURRENT: 'covered', EXPIRING: 'partial', EXPIRED: 'missing' }[s] ?? ''; }
-  evStatusClass(s: string): string { return { APPROVED: 'approved', COLLECTED: 'pending', UNDER_REVIEW: 'running', REJECTED: 'rejected', EXPIRED: 'error' }[s] ?? ''; }
-  sourceIcon(s: string): string { return { MANUAL_UPLOAD: 'upload_file', GITHUB: 'code', AWS: 'cloud', JIRA: 'bug_report', GOOGLE_WORKSPACE: 'groups' }[s] ?? 'description'; }
-  sourceLabel(s: string): string { return { MANUAL_UPLOAD: 'Manual', GITHUB: 'GitHub', AWS: 'AWS', JIRA: 'Jira', GOOGLE_WORKSPACE: 'Google' }[s] ?? s; }
+  sourceLabel(s: string): string { return _sourceLabel(s); }
+  freshnessLabel(s: string): string {
+    return ({ CURRENT: 'Current', EXPIRING: 'Expiring', EXPIRED: 'Expired' } as Record<string, string>)[s] ?? s;
+  }
   mimeIcon(m?: string): string {
     if (!m) return 'description';
     if (m.includes('pdf')) return 'picture_as_pdf';
@@ -306,3 +443,4 @@ export class EvidenceComponent implements OnInit {
     this.api.evidence().subscribe(list => this.items.set(list));
   }
 }
+

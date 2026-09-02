@@ -1,5 +1,6 @@
 package com.syncpoint.compliance.audit.service;
 
+import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.entity.AuditEvent;
 import com.syncpoint.compliance.audit.repository.AuditEventRepository;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,13 @@ public class AuditService {
     }
 
     @Transactional
-    public void record(UUID organizationId, UUID actorUserId, String eventType, String entityType, UUID entityId) {
+    public void record(UUID organizationId, UUID actorUserId, AuditEvents eventType, String entityType, UUID entityId) {
         record(organizationId, actorUserId, eventType, entityType, entityId, Map.of());
     }
 
     @Transactional
-    public void record(UUID organizationId, UUID actorUserId, String eventType,
+    public void record(UUID organizationId, UUID actorUserId, AuditEvents eventType,
                        String entityType, UUID entityId, Map<String, Object> metadata) {
-        repository.save(new AuditEvent(organizationId, actorUserId, eventType, entityType, entityId, metadata));
+        repository.save(new AuditEvent(organizationId, actorUserId, eventType.code(), entityType, entityId, metadata));
     }
 }

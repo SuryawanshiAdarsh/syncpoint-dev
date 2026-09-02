@@ -6,6 +6,7 @@
       "@ui":         ["src/app/shared/ui/index.ts"],
       "@ui/*":       ["src/app/shared/ui/*"],
       "@captions":   ["src/app/shared/captions/index.ts"],
+      "@constants":  ["src/app/shared/constants/index.ts"],
       "@core/*":     ["src/app/core/*"],
       "@features/*": ["src/app/features/*"],
       "@env/*":      ["src/environments/*"]

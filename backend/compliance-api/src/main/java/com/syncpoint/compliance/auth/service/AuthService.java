@@ -1,5 +1,6 @@
 package com.syncpoint.compliance.auth.service;
 
+import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.service.AuditService;
 import com.syncpoint.compliance.auth.dto.LoginRequest;
 import com.syncpoint.compliance.auth.dto.MeResponse;
@@ -67,8 +68,8 @@ public class AuthService {
                 req.name().trim()));
         memberRepository.save(new OrganizationMember(org.getId(), user.getId(), Role.OWNER));
 
-        auditService.record(org.getId(), user.getId(), "USER_CREATED", "user", user.getId());
-        auditService.record(org.getId(), user.getId(), "LOGIN", "user", user.getId());
+        auditService.record(org.getId(), user.getId(), AuditEvents.USER_CREATED, "user", user.getId());
+        auditService.record(org.getId(), user.getId(), AuditEvents.LOGIN, "user", user.getId());
 
         return issueTokens(user, org.getId(), Role.OWNER);
     }
@@ -84,7 +85,7 @@ public class AuthService {
                 .findFirst()
                 .orElseThrow(() -> new UnauthorizedException("User has no organization membership"));
 
-        auditService.record(membership.getOrganizationId(), user.getId(), "LOGIN", "user", user.getId());
+        auditService.record(membership.getOrganizationId(), user.getId(), AuditEvents.LOGIN, "user", user.getId());
 
         return issueTokens(user, membership.getOrganizationId(), membership.getRole());
     }

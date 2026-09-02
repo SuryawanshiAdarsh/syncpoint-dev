@@ -6,6 +6,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../core/api/api.service';
 import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
+import {
+  controlStatusClass as _controlStatusClass,
+  evidenceSourceIcon as _sourceIcon,
+  evidenceSourceLabel as _sourceLabel,
+  freshnessClass as _freshnessClass,
+} from '@constants';
 
 @Component({
   standalone: true,
@@ -283,19 +289,9 @@ export class DashboardComponent implements OnInit {
     return 'Excellent coverage. Ready to export an audit package.';
   }
 
-  statusClass(s: string): string {
-    return { COVERED: 'covered', PARTIAL: 'partial', MISSING: 'missing', NEEDS_REVIEW: 'needs-review' }[s] ?? '';
-  }
-  statusLabel(s: string): string {
-    return { COVERED: 'Covered', PARTIAL: 'Partial', MISSING: 'Missing', NEEDS_REVIEW: 'Needs review' }[s] ?? s;
-  }
-  freshnessClass(s: string): string {
-    return { CURRENT: 'covered', EXPIRING: 'partial', EXPIRED: 'missing' }[s] ?? '';
-  }
-  sourceIcon(s: string): string {
-    return { MANUAL_UPLOAD: 'upload_file', GITHUB: 'code', AWS: 'cloud', JIRA: 'bug_report', GOOGLE_WORKSPACE: 'groups' }[s] ?? 'description';
-  }
-  sourceLabel(s: string): string {
-    return { MANUAL_UPLOAD: 'Manual upload', GITHUB: 'GitHub', AWS: 'AWS', JIRA: 'Jira', GOOGLE_WORKSPACE: 'Google Workspace' }[s] ?? s;
-  }
+  statusClass(s: string): string { return _controlStatusClass(s); }
+  statusLabel(s: string): string { return (CAPTIONS.status as Record<string, string>)[s] ?? s; }
+  freshnessClass(s: string): string { return _freshnessClass(s); }
+  sourceIcon(s: string): string { return _sourceIcon(s); }
+  sourceLabel(s: string): string { return _sourceLabel(s); }
 }

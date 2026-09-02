@@ -54,6 +54,9 @@ export interface Evidence {
   sizeBytes?: number;
   mimeType?: string;
   createdAt: string;
+  mapped: boolean;
+  mappingCount: number;
+  lowestConfidence?: number;
 }
 
 export type MappingType = 'AI_SUGGESTED' | 'HUMAN_CONFIRMED' | 'HUMAN_REJECTED';

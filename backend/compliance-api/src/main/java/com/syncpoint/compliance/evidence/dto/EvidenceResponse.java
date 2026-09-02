@@ -3,6 +3,7 @@ package com.syncpoint.compliance.evidence.dto;
 import com.syncpoint.compliance.evidence.entity.EvidenceSourceType;
 import com.syncpoint.compliance.evidence.entity.EvidenceStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -20,7 +21,10 @@ public record EvidenceResponse(
         String contentHash,
         Long sizeBytes,
         String mimeType,
-        Instant createdAt
+        Instant createdAt,
+        boolean mapped,
+        int mappingCount,
+        BigDecimal lowestConfidence
 ) {
     public enum FreshnessState { CURRENT, EXPIRING, EXPIRED }
 }

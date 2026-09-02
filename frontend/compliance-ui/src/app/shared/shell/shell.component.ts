@@ -252,6 +252,7 @@ export class ShellComponent implements OnInit {
   readonly sections: NavSection[] = [
     { title: CAPTIONS.shell.sidebarSectionOverview, items: [
         { path: '/dashboard',     label: CAPTIONS.shell.navDashboard,    icon: 'insights' },
+        { path: '/review-queue',  label: CAPTIONS.shell.navReviewQueue,  icon: 'fact_check' },
         { path: '/onboarding',    label: CAPTIONS.shell.navOnboarding,   icon: 'rocket_launch' } ] },
     { title: CAPTIONS.shell.sidebarSectionEvidence, items: [
         { path: '/controls',      label: CAPTIONS.shell.navControls,     icon: 'checklist' },
