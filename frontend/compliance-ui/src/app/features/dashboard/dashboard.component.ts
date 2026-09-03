@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
-import { ControlGap, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
+import { ControlGap, CoverageTrendPoint, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
 import {
   controlStatusClass as _controlStatusClass,
@@ -125,6 +125,18 @@ import {
       margin-bottom: 4px;
     }
     .sub-line { color: var(--color-text-muted); font-size: 13.5px; margin-bottom: 24px; }
+
+    /* Coverage trend */
+    .trend-card { margin-bottom: var(--space-4); }
+    .trend-chart { width: 100%; height: 160px; display: block; }
+    .trend-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px; padding: 32px 16px; text-align: center;
+      color: var(--color-text-muted);
+    }
+    .trend-empty mat-icon { font-size: 22px; height: 22px; width: 22px; color: var(--color-text-muted); }
+    .trend-empty h3 { font-size: 14px; color: var(--color-text); margin: 0; }
+    .trend-empty p { font-size: 12.5px; margin: 0; max-width: 380px; }
   `],
   template: `
     <div class="page">
@@ -194,6 +206,31 @@ import {
         </div>
       </div>
 
+      <!-- Coverage trend -->
+      <div class="card trend-card">
+        <div class="card-header">
+          <h2>{{ c.dashboard.trendTitle }}</h2>
+        </div>
+        <p class="muted small" style="padding:0 var(--space-6) 12px;">{{ c.dashboard.trendCaption }}</p>
+        <svg *ngIf="trend().length >= 2; else trendEmpty" class="trend-chart" viewBox="0 0 600 160" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path [attr.d]="trendAreaPath()" fill="url(#trendFill)" stroke="none"/>
+          <path [attr.d]="trendLinePath()" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <ng-template #trendEmpty>
+          <div class="trend-empty">
+            <mat-icon>show_chart</mat-icon>
+            <h3>{{ c.dashboard.trendEmptyTitle }}</h3>
+            <p>{{ c.dashboard.trendEmptyMessage }}</p>
+          </div>
+        </ng-template>
+      </div>
+
       <!-- Two-column: gaps + recent -->
       <div class="two-col">
         <div class="card">
@@ -259,6 +296,7 @@ export class DashboardComponent implements OnInit {
   gaps = signal<ControlGap[]>([]);
   recent = signal<Evidence[]>([]);
   me = signal<Me | null>(null);
+  trend = signal<CoverageTrendPoint[]>([]);
 
   salutation = computed(() => {
     const h = new Date().getHours();
@@ -272,6 +310,7 @@ export class DashboardComponent implements OnInit {
     this.api.summary().subscribe(s => this.summary.set(s));
     this.api.gaps().subscribe(g => this.gaps.set(g));
     this.api.recentEvidence().subscribe(e => this.recent.set(e));
+    this.api.coverageTrend(30).subscribe(t => this.trend.set(t));
   }
 
   // Ring math: circumference of r=94 is 2*PI*94 ≈ 590.62.
@@ -294,4 +333,29 @@ export class DashboardComponent implements OnInit {
   freshnessClass(s: string): string { return _freshnessClass(s); }
   sourceIcon(s: string): string { return _sourceIcon(s); }
   sourceLabel(s: string): string { return _sourceLabel(s); }
+
+  // Trend chart math: viewBox is 600x160; x spreads points evenly, y maps 0-100% to bottom-top.
+  private trendCoords(): { x: number; y: number }[] {
+    const points = this.trend();
+    const w = 600, h = 160, pad = 6;
+    return points.map((p, i) => ({
+      x: points.length === 1 ? w / 2 : (i / (points.length - 1)) * w,
+      y: pad + (1 - p.coveragePercent / 100) * (h - pad * 2),
+    }));
+  }
+
+  trendLinePath(): string {
+    const coords = this.trendCoords();
+    if (!coords.length) return '';
+    return coords.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  }
+
+  trendAreaPath(): string {
+    const coords = this.trendCoords();
+    if (!coords.length) return '';
+    const line = this.trendLinePath();
+    const last = coords[coords.length - 1];
+    const first = coords[0];
+    return `${line} L${last.x.toFixed(1)},160 L${first.x.toFixed(1)},160 Z`;
+  }
 }

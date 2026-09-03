@@ -7,8 +7,8 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 
 | ID | Status |
 |---|---|
-| [BUG-001](#bug-001-review-queue-action-column-overflows-the-table) | Open |
-| [BUG-002](#bug-002-review-queue-open-in-evidence-does-not-deep-link-to-the-row) | Open |
+| [BUG-001](#bug-001-review-queue-action-column-overflows-the-table) | Fixed (2026-09-03) |
+| [BUG-002](#bug-002-review-queue-open-in-evidence-does-not-deep-link-to-the-row) | Fixed (2026-09-03) |
 | [BUG-003](#bug-003-soc-2-badge-is-hardcoded-instead-of-read-from-the-orgs-active-framework) | Open |
 | [BUG-004](#bug-004-demo-label-is-hardcoded-instead-of-driven-by-environment-config) | Open |
 | [BUG-005](#bug-005-no-versioned-acceptance-tracking-for-legal-documents) | Open |
@@ -56,6 +56,12 @@ Kept aside at the user's request to discuss the *navigation* behavior of the sam
 (BUG-002) before touching its layout again — no point re-laying-out a button whose destination is
 also being redesigned.
 
+### Resolution (2026-09-03)
+Implemented step 2 (icon-only `open_in_new` button with `aria-label`/`title`) and step 3
+(`table-layout: fixed` + `<colgroup>` width budget: 32/14/12/12/18/12%, scoped automatically via
+Angular's component style encapsulation) plus a `.table-scroll { overflow-x: auto }` wrapper as a
+safety net. Verified in browser — no overflow at any viewport width.
+
 ---
 
 ## BUG-002: Review Queue "Open in Evidence" does not deep-link to the row
@@ -97,6 +103,13 @@ a resolvable control ID for mapped items (only `mappingCount`), and on EXPIRING 
 
 ### Why deferred
 User asked to log this for later rather than implement Option A/B in this pass.
+
+### Resolution (2026-09-03)
+Implemented Option A: the button now navigates to `/evidence?highlight=<evidenceId>`. The Evidence
+page's `ngOnInit` resets every filter (status → `ALL`, source/freshness/mapped → cleared, search →
+cleared) when a `highlight` param is present, jumps pagination to the item's page, scrolls it into
+view, and applies a 2.5s CSS pulse. Verified in browser with a real `APPROVED` + `EXPIRING` row
+(previously hidden under the default "Needs attention" filter) — it now renders correctly.
 
 ---
 

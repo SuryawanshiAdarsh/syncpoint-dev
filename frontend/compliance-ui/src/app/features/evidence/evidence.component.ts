@@ -104,6 +104,10 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
 
     .row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
 
+    /* BUG-002: pulse the row a deep link (Review Queue "Open in Evidence") landed on. */
+    @keyframes row-pulse { from { background: var(--color-primary-soft); } to { background: transparent; } }
+    .row-highlight { animation: row-pulse 2s ease-out; }
+
     .count-line {
       color: var(--color-text-muted);
       font-size: var(--text-sm);
@@ -210,7 +214,7 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
             <th style="text-align:right;padding-right:24px;">{{ c.evidence.tableActions }}</th>
           </tr></thead>
           <tbody>
-            <tr *ngFor="let e of paged()">
+            <tr *ngFor="let e of paged()" [id]="'evidence-row-' + e.id" [class.row-highlight]="highlightId() === e.id">
               <td style="padding-left:24px;">
                 <div class="name-cell">
                   <div class="file-icon-wrap"><mat-icon>{{ mimeIcon(e.mimeType) }}</mat-icon></div>
@@ -311,6 +315,7 @@ export class EvidenceComponent implements OnInit {
   freshnessFilter = signal<'' | FreshnessState>('');
   mappedFilter = signal<MappedFilter>('');
   page = signal(0);
+  highlightId = signal<string | null>(null);
 
   statusChips = computed<UiFilterChip[]>(() => {
     const list = this.items();
@@ -349,7 +354,20 @@ export class EvidenceComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.reload();
+    const highlight = this.route.snapshot.queryParamMap.get('highlight');
+    if (highlight) {
+      // Reset every filter so the linked-to row is guaranteed to be visible, regardless of its status.
+      this.statusFilter.set('ALL');
+      this.sourceFilter.set('');
+      this.freshnessFilter.set('');
+      this.mappedFilter.set('');
+      this.search.set('');
+      this.highlightId.set(highlight);
+    }
+    this.api.evidence().subscribe(list => {
+      this.items.set(list);
+      if (highlight) this.jumpToHighlight(highlight);
+    });
     const controlCode = this.route.snapshot.queryParamMap.get('control');
     this.api.controls().subscribe(cs => {
       this.controls.set(cs);
@@ -357,6 +375,14 @@ export class EvidenceComponent implements OnInit {
         this.preselectControlId = cs.find(c => c.code === controlCode)?.id ?? null;
       }
     });
+  }
+
+  private jumpToHighlight(id: string): void {
+    const idx = this.filtered().findIndex(e => e.id === id);
+    if (idx === -1) return;
+    this.page.set(Math.floor(idx / this.pageSize));
+    setTimeout(() => document.getElementById('evidence-row-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    setTimeout(() => this.highlightId.set(null), 2500);
   }
 
   onStatusChipChange(key: string): void {

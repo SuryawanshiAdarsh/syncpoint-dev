@@ -166,6 +166,15 @@ export interface ControlGap {
   status: ControlStatus;
 }
 
+export interface CoverageTrendPoint {
+  date: string;
+  covered: number;
+  partial: number;
+  missing: number;
+  needsReview: number;
+  coveragePercent: number;
+}
+
 export type CollectionRunStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
 export type CollectionTrigger = 'MANUAL' | 'SCHEDULED';
 export type CollectionItemStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED';

@@ -67,6 +67,15 @@ interface QueueItem {
       padding: 14px var(--space-6);
       border-top: 1px solid var(--color-divider);
     }
+    /* BUG-001: auto table layout let unshrinkable cells (the action button) paint
+       past the card edge -- fix layout + width budget, scoped to this component only. */
+    .table-scroll { overflow-x: auto; }
+    .data-table { table-layout: fixed; }
+    .icon-link {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; padding: 0; flex-shrink: 0;
+    }
+    .icon-link mat-icon { font-size: 16px; height: 16px; width: 16px; }
   `],
   template: `
     <div class="page">
@@ -79,7 +88,12 @@ interface QueueItem {
       <ui-card padding="flush">
         <div class="count-line">{{ c.reviewQueue.countLine(paged().length, queue().length) }}</div>
 
-        <table class="data-table" *ngIf="paged().length; else empty">
+        <div class="table-scroll" *ngIf="paged().length; else empty">
+        <table class="data-table">
+          <colgroup>
+            <col style="width:32%"><col style="width:14%"><col style="width:12%">
+            <col style="width:12%"><col style="width:18%"><col style="width:12%">
+          </colgroup>
           <thead><tr>
             <th style="padding-left:24px;">{{ c.reviewQueue.tableName }}</th>
             <th>{{ c.reviewQueue.tableSource }}</th>
@@ -103,11 +117,15 @@ interface QueueItem {
                 </span>
               </td>
               <td style="text-align:right;padding-right:24px;">
-                <a class="btn ghost sm" routerLink="/evidence">{{ c.reviewQueue.goToEvidence }}</a>
+                <a class="btn ghost sm icon-link" [routerLink]="['/evidence']" [queryParams]="{ highlight: item.evidence.id }"
+                   [attr.aria-label]="c.reviewQueue.goToEvidence" [title]="c.reviewQueue.goToEvidence">
+                  <mat-icon>open_in_new</mat-icon>
+                </a>
               </td>
             </tr>
           </tbody>
         </table>
+        </div>
 
         <div class="pager" *ngIf="queue().length">
           <button class="btn ghost sm" (click)="prevPage()" [disabled]="page() === 0">{{ c.reviewQueue.pagePrev }}</button>

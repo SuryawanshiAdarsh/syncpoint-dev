@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Control, ControlGap, ControlMapping, AiAnalysisSummary, AuditEvent, CollectionRun, CollectionRunDetail,
-  DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
+  CoverageTrendPoint, DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
   Member, Organization, TokenResponse
 } from './api.types';
 
@@ -129,6 +129,9 @@ export class ApiService {
   summary(): Observable<DashboardSummary> { return this.http.get<DashboardSummary>(`${this.base}/dashboard/summary`); }
   gaps(): Observable<ControlGap[]> { return this.http.get<ControlGap[]>(`${this.base}/dashboard/gaps`); }
   recentEvidence(): Observable<Evidence[]> { return this.http.get<Evidence[]>(`${this.base}/dashboard/recent-evidence`); }
+  coverageTrend(days = 30): Observable<CoverageTrendPoint[]> {
+    return this.http.get<CoverageTrendPoint[]>(`${this.base}/dashboard/coverage-trend?days=${days}`);
+  }
 
   // Export
   startExport(): Observable<ExportJob> {

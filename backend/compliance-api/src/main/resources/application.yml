@@ -57,6 +57,9 @@ syncpoint:
     # How often the background job checks for DAILY/WEEKLY integrations that are due.
     # Standard cron (seconds field first). Default: top of every hour.
     sweep-cron: ${COLLECTION_SWEEP_CRON:0 0 * * * *}
+  coverage:
+    # Daily job that snapshots every org's live control status for the coverage-trend chart.
+    snapshot-cron: ${COVERAGE_SNAPSHOT_CRON:0 30 0 * * *}
 
 management:
   endpoints:

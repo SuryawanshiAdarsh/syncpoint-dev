@@ -107,6 +107,11 @@ export const CAPTIONS = {
       'Upload a document or connect an integration to start collecting.',
     goToEvidence: 'Go to Evidence',
     goToControls: 'Go to Controls',
+    trendTitle: 'Coverage trend',
+    trendCaption: 'Daily snapshot of control coverage across your organization.',
+    trendEmptyTitle: 'Building your trend',
+    trendEmptyMessage:
+      'We snapshot coverage once a day — check back tomorrow to see it start tracking over time.',
   },
 
   controls: {
