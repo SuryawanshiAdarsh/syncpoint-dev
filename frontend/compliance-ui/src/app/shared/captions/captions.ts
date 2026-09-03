@@ -140,6 +140,8 @@ export const CAPTIONS = {
     aiAnalysisTitle: 'AI analysis',
     aiAnalysisCaption:
       'Retrieval-augmented suggestions. Always reviewed by a human.',
+    aiAnalysisEmptyTitle: 'No AI analysis yet',
+    aiAnalysisEmptyMessage: 'Run "AI analyze" on a piece of evidence from the Evidence page to see reasoning here.',
     sourcesTitle: 'Sources',
     sourcesCaption:
       'Compliance-knowledge chunks the AI cited when producing the suggestion.',
@@ -147,6 +149,16 @@ export const CAPTIONS = {
     rejectMapping: 'Reject',
     addComment: 'Add comment',
     uploadEvidence: 'Upload evidence',
+    tableMapping: 'Mapping',
+    tableClassification: 'Classification',
+    tableActions: 'Actions',
+    mappingTypeAiSuggested: 'AI suggested',
+    mappingTypeHumanConfirmed: 'Human confirmed',
+    mappingTypeHumanRejected: 'Rejected',
+    confidenceLabel: (n: number) => `${Math.round(n * 100)}% confidence`,
+    mappingConfirmedToast: 'Mapping confirmed — control status updated.',
+    mappingRejectedToast: 'Mapping rejected and removed.',
+    mappingActionError: 'Could not complete that action. Try again.',
   },
 
   evidence: {

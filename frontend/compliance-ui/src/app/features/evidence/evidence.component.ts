@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -276,6 +277,10 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
 export class EvidenceComponent implements OnInit {
   readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+
+  /** Set when arriving via a Control Detail "Upload evidence" deep link (?control=CODE). */
+  private preselectControlId: string | null = null;
 
   readonly sourceOptions = Object.values(EVIDENCE_SOURCE);
   readonly freshnessOptions = Object.values(FRESHNESS);
@@ -338,7 +343,13 @@ export class EvidenceComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
-    this.api.controls().subscribe(cs => this.controls.set(cs));
+    const controlCode = this.route.snapshot.queryParamMap.get('control');
+    this.api.controls().subscribe(cs => {
+      this.controls.set(cs);
+      if (controlCode) {
+        this.preselectControlId = cs.find(c => c.code === controlCode)?.id ?? null;
+      }
+    });
   }
 
   onStatusChipChange(key: string): void {
@@ -388,8 +399,9 @@ export class EvidenceComponent implements OnInit {
     this.uploading.set(true);
     this.uploadError.set(null);
     this.api.uploadEvidence(form).subscribe({
-      next: () => {
+      next: (created) => {
         this.msg.set(`Uploaded "${this.name || this.file?.name}"`);
+        if (this.preselectControlId) this.selectedControl[created.id] = this.preselectControlId;
         this.name = ''; this.description = ''; this.file = null;
         this.reload();
       },

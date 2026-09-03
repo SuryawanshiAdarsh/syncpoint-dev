@@ -74,6 +74,37 @@ export interface Mapping {
   createdAt: string;
 }
 
+/** One row of the Control Detail "mapped evidence" table — mapping + evidence summary joined. */
+export interface ControlMapping {
+  mappingId: string;
+  evidenceId: string;
+  evidenceName: string;
+  sourceType?: EvidenceSourceType;
+  sourceSystem?: string;
+  evidenceStatus?: EvidenceStatus;
+  freshness?: FreshnessState;
+  collectedAt?: string;
+  mappingType: MappingType;
+  classification?: Classification;
+  confidence?: number;
+  reason?: string;
+  mappedAt: string;
+}
+
+/** AI reasoning summary for the Control Detail "AI analysis" panel. */
+export interface AiAnalysisSummary {
+  id: string;
+  evidenceId: string;
+  evidenceName: string;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  classification?: Classification;
+  confidence?: number;
+  reason?: string;
+  createdAt: string;
+}
+
 export interface Integration {
   id: string;
   provider: 'GITHUB' | 'AWS' | 'JIRA' | 'GOOGLE_WORKSPACE';

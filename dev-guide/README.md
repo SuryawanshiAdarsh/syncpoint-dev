@@ -13,6 +13,7 @@ Every planning, architecture, and status document lives here. If you're new to t
 | *Where is the project today?* | [STATUS.md](STATUS.md) |
 | *What are the technical milestones (M1 → M10)?* | [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md) |
 | *Which 4-day sprint wires the core flows (onboarding, dashboard, mapping, control detail)?* | [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md) |
+| *How does scheduled collection + org settings work?* | [SETTINGS-AND-SCHEDULED-COLLECTION.md](SETTINGS-AND-SCHEDULED-COLLECTION.md) |
 | *What non-code work is needed for a first paying customer?* | [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) |
 | *What legal docs do I need before signing a customer?* | [LEGAL.md](LEGAL.md) |
 | *How do I actually take money — entity, bank, pricing, invoicing?* | [BUSINESS.md](BUSINESS.md) |

@@ -72,6 +72,19 @@ public class EvidenceController {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createMapping(id, req));
     }
 
+    @PostMapping("/{id}/mappings/{mappingId}/confirm")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','REVIEWER')")
+    public ResponseEntity<MappingResponse> confirmMapping(@PathVariable UUID id, @PathVariable UUID mappingId) {
+        return ResponseEntity.ok(service.confirmMapping(id, mappingId));
+    }
+
+    @DeleteMapping("/{id}/mappings/{mappingId}")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','REVIEWER')")
+    public ResponseEntity<Void> rejectMapping(@PathVariable UUID id, @PathVariable UUID mappingId) {
+        service.rejectMapping(id, mappingId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/review")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN','REVIEWER')")
     public ResponseEntity<ReviewResponse> createReview(@PathVariable UUID id,

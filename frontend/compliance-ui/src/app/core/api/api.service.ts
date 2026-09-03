@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
-  Control, ControlGap, DashboardSummary, Evidence, ExportJob, Framework,
+  Control, ControlGap, ControlMapping, AiAnalysisSummary, DashboardSummary, Evidence, ExportJob, Framework,
   Integration, Mapping, Me, TokenResponse
 } from './api.types';
 
@@ -29,6 +29,12 @@ export class ApiService {
   controlEvidence(id: string): Observable<Evidence[]> {
     return this.http.get<Evidence[]>(`${this.base}/controls/${id}/evidence`);
   }
+  controlMappings(id: string): Observable<ControlMapping[]> {
+    return this.http.get<ControlMapping[]>(`${this.base}/controls/${id}/mappings`);
+  }
+  controlAiAnalyses(id: string): Observable<AiAnalysisSummary[]> {
+    return this.http.get<AiAnalysisSummary[]>(`${this.base}/controls/${id}/ai-analyses`);
+  }
 
   // Evidence
   evidence(): Observable<Evidence[]> { return this.http.get<Evidence[]>(`${this.base}/evidence`); }
@@ -43,6 +49,12 @@ export class ApiService {
     controlId: string; mappingType: string; classification?: string; confidence?: number; reason?: string;
   }): Observable<Mapping> {
     return this.http.post<Mapping>(`${this.base}/evidence/${evidenceId}/map`, body);
+  }
+  confirmMapping(evidenceId: string, mappingId: string): Observable<Mapping> {
+    return this.http.post<Mapping>(`${this.base}/evidence/${evidenceId}/mappings/${mappingId}/confirm`, {});
+  }
+  rejectMapping(evidenceId: string, mappingId: string): Observable<unknown> {
+    return this.http.delete(`${this.base}/evidence/${evidenceId}/mappings/${mappingId}`);
   }
   reviewEvidence(evidenceId: string, body: { decision: 'APPROVED' | 'REJECTED'; comments?: string }): Observable<unknown> {
     return this.http.post(`${this.base}/evidence/${evidenceId}/review`, body);

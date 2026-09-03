@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, UUID> {
     List<AiAnalysis> findByEvidenceIdAndOrganizationIdOrderByCreatedAtDesc(UUID evidenceId, UUID organizationId);
+    List<AiAnalysis> findByControlIdAndOrganizationIdOrderByCreatedAtDesc(UUID controlId, UUID organizationId);
 }

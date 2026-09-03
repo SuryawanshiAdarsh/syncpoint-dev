@@ -2,6 +2,7 @@ package com.syncpoint.compliance.ai.service;
 
 import com.syncpoint.compliance.ai.client.AiServiceClient;
 import com.syncpoint.compliance.ai.dto.AiMappingResult;
+import com.syncpoint.compliance.ai.dto.AiAnalysisSummaryResponse;
 import com.syncpoint.compliance.ai.entity.AiAnalysis;
 import com.syncpoint.compliance.ai.repository.AiAnalysisRepository;
 import com.syncpoint.compliance.audit.AuditEvents;
@@ -23,8 +24,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AiAnalysisService {
@@ -96,5 +99,21 @@ public class AiAnalysisService {
                     TenantContext.require().userId()));
         }
         return saved;
+    }
+
+    /** Reasoning history for the Control Detail "AI analysis" panel, newest first. */
+    @Transactional(readOnly = true)
+    public List<AiAnalysisSummaryResponse> listForControl(UUID controlId) {
+        UUID orgId = TenantContext.require().organizationId();
+        List<AiAnalysis> list = analyses.findByControlIdAndOrganizationIdOrderByCreatedAtDesc(controlId, orgId);
+        if (list.isEmpty()) return List.of();
+        Map<UUID, String> names = evidenceRepo.findAllById(
+                list.stream().map(AiAnalysis::getEvidenceId).collect(Collectors.toSet())
+        ).stream().collect(Collectors.toMap(Evidence::getId, Evidence::getName));
+        return list.stream().map(a -> new AiAnalysisSummaryResponse(
+                a.getId(), a.getEvidenceId(), names.getOrDefault(a.getEvidenceId(), "(deleted)"),
+                a.getProvider(), a.getModel(), a.getPromptVersion(),
+                a.getClassification(), a.getConfidence(), a.getReason(), a.getCreatedAt()))
+                .toList();
     }
 }

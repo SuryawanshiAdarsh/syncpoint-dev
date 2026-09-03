@@ -211,6 +211,47 @@ public class EvidenceService {
                 m.getCreatedAt())).toList();
     }
 
+    /** A reviewer accepting an AI-suggested (or re-confirming an existing) mapping. */
+    @Transactional
+    public MappingResponse confirmMapping(UUID evidenceId, UUID mappingId) {
+        Evidence e = requireOwned(evidenceId);
+        EvidenceControlMapping mapping = requireOwnedMapping(e, mappingId);
+        mapping.setMappingType(MappingType.HUMAN_CONFIRMED);
+        EvidenceControlMapping saved = mappingRepo.save(mapping);
+        Control control = controlRepo.findById(saved.getControlId()).orElse(null);
+        UUID actor = TenantContext.require().userId();
+
+        audit.record(e.getOrganizationId(), actor,
+                AuditEvents.MAPPING_CONFIRMED, "evidence_control_mapping", saved.getId(),
+                Map.of("evidenceId", e.getId().toString(),
+                        "controlCode", control == null ? "" : control.getCode()));
+
+        return new MappingResponse(saved.getId(), saved.getEvidenceId(), saved.getControlId(),
+                control == null ? null : control.getCode(), saved.getMappingType(),
+                saved.getClassification(), saved.getConfidence(), saved.getReason(), saved.getCreatedAt());
+    }
+
+    /** A reviewer rejecting an AI-suggested mapping — removes it entirely rather than leaving a stale row. */
+    @Transactional
+    public void rejectMapping(UUID evidenceId, UUID mappingId) {
+        Evidence e = requireOwned(evidenceId);
+        EvidenceControlMapping mapping = requireOwnedMapping(e, mappingId);
+        Control control = controlRepo.findById(mapping.getControlId()).orElse(null);
+        UUID actor = TenantContext.require().userId();
+
+        mappingRepo.delete(mapping);
+
+        audit.record(e.getOrganizationId(), actor,
+                AuditEvents.MAPPING_REJECTED, "evidence_control_mapping", mappingId,
+                Map.of("evidenceId", e.getId().toString(),
+                        "controlCode", control == null ? "" : control.getCode()));
+    }
+
+    private EvidenceControlMapping requireOwnedMapping(Evidence e, UUID mappingId) {
+        return mappingRepo.findByIdAndEvidenceIdAndOrganizationId(mappingId, e.getId(), e.getOrganizationId())
+                .orElseThrow(() -> new NotFoundException("Mapping not found"));
+    }
+
     @Transactional
     public ReviewResponse createReview(UUID evidenceId, CreateReviewRequest req) {
         Evidence e = requireOwned(evidenceId);
