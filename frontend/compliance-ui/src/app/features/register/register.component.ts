@@ -183,7 +183,7 @@ export class RegisterComponent {
     }).subscribe({
       next: (t) => {
         this.store.setTokens(t.accessToken, t.refreshToken);
-        this.router.navigateByUrl('/onboarding');
+        this.router.navigateByUrl('/onboarding', { replaceUrl: true });
       },
       error: (e) => {
         this.loading.set(false);

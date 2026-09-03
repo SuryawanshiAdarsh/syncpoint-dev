@@ -8,7 +8,7 @@ export const authGuard: CanActivateFn = () => {
   const store = inject(TokenStore);
   const router = inject(Router);
   if (store.isAuthenticated()) return true;
-  router.navigateByUrl('/login');
+  router.navigateByUrl('/login', { replaceUrl: true });
   return false;
 };
 
@@ -16,7 +16,7 @@ export const publicGuard: CanActivateFn = () => {
   const store = inject(TokenStore);
   const router = inject(Router);
   if (!store.isAuthenticated()) return true;
-  router.navigateByUrl('/dashboard');
+  router.navigateByUrl('/dashboard', { replaceUrl: true });
   return false;
 };
 
@@ -31,6 +31,7 @@ export const onboardingGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
   return api.me().pipe(
     map(me => (me.onboardingCompleted ? true : router.parseUrl('/onboarding'))),
-    catchError(() => of(true)),
+    // /auth/me failing (expired/invalid token) must deny access, not silently allow it.
+    catchError(() => of(router.parseUrl('/login'))),
   );
 };

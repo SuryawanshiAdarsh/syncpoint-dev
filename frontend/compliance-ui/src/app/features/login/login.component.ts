@@ -266,7 +266,7 @@ export class LoginComponent {
     this.api.login({ email: this.email, password: this.password }).subscribe({
       next: (t) => {
         this.store.setTokens(t.accessToken, t.refreshToken);
-        this.router.navigateByUrl('/dashboard');
+        this.router.navigateByUrl('/dashboard', { replaceUrl: true });
       },
       error: (e) => {
         this.loading.set(false);

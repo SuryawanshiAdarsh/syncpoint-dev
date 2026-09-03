@@ -247,7 +247,7 @@ export class OnboardingComponent implements OnInit {
   finishSetup(): void {
     this.finishing.set(true);
     this.api.completeOnboarding().subscribe({
-      next: () => this.router.navigateByUrl('/dashboard'),
+      next: () => this.router.navigateByUrl('/dashboard', { replaceUrl: true }),
       error: () => this.finishing.set(false),
     });
   }

@@ -277,6 +277,6 @@ export class ShellComponent implements OnInit {
 
   logout(): void {
     this.store.clear();
-    this.router.navigateByUrl('/login');
+    this.router.navigateByUrl('/login', { replaceUrl: true });
   }
 }
