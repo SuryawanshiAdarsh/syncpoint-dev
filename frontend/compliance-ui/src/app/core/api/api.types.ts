@@ -14,6 +14,7 @@ export interface Me {
   organizationId: string;
   organizationName: string;
   role: Role;
+  onboardingCompleted: boolean;
 }
 
 export type ControlStatus = 'COVERED' | 'PARTIAL' | 'MISSING' | 'NEEDS_REVIEW';
@@ -59,6 +60,16 @@ export interface Evidence {
   mapped: boolean;
   mappingCount: number;
   lowestConfidence?: number;
+}
+
+export interface EvidenceVersion {
+  id: string;
+  version: number;
+  sizeBytes: number;
+  mimeType?: string;
+  contentHash: string;
+  collectedAt: string;
+  createdAt: string;
 }
 
 export type MappingType = 'AI_SUGGESTED' | 'HUMAN_CONFIRMED' | 'HUMAN_REJECTED';
@@ -125,6 +136,8 @@ export interface Organization {
   name: string;
   slug: string;
   createdAt: string;
+  onboardingCompleted: boolean;
+  onboardingCompletedAt?: string;
 }
 
 export interface Member {
@@ -184,6 +197,18 @@ export interface CollectionItem {
 export interface CollectionRunDetail {
   run: CollectionRun;
   items: CollectionItem[];
+}
+
+export interface AuditEvent {
+  id: string;
+  eventType: string;
+  entityType?: string;
+  entityId?: string;
+  actorUserId?: string;
+  actorName?: string;
+  actorEmail?: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 export interface ExportJob {

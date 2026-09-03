@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard } from './core/auth/auth.guard';
+import { authGuard, publicGuard, onboardingGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -15,7 +15,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, onboardingGuard],
     loadComponent: () => import('./shared/shell/shell.component').then(m => m.ShellComponent),
     children: [
       { path: 'dashboard',    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
@@ -28,6 +28,7 @@ export const routes: Routes = [
       { path: 'onboarding',   loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
       { path: 'ask',          loadComponent: () => import('./features/ask/ask.component').then(m => m.AskComponent) },
       { path: 'audit-package', loadComponent: () => import('./features/export/export.component').then(m => m.ExportComponent) },
+      { path: 'audit-log',     loadComponent: () => import('./features/audit-log/audit-log.component').then(m => m.AuditLogComponent) },
       { path: 'settings',      loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent) },
     ]
   },

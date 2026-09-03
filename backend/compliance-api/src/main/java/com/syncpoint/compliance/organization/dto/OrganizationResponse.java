@@ -7,6 +7,8 @@ public record OrganizationResponse(
         UUID id,
         String name,
         String slug,
-        Instant createdAt
+        Instant createdAt,
+        boolean onboardingCompleted,
+        Instant onboardingCompletedAt
 ) {
 }

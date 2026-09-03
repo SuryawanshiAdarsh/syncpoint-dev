@@ -115,7 +115,7 @@ public class AuthService {
         Organization org = organizationRepository.findById(p.organizationId())
                 .orElseThrow(() -> new NotFoundException("Organization not found"));
         return new MeResponse(user.getId(), user.getEmail(), user.getName(),
-                org.getId(), org.getName(), p.role());
+                org.getId(), org.getName(), p.role(), org.isOnboardingCompleted());
     }
 
     private TokenResponse issueTokens(User user, UUID orgId, Role role) {

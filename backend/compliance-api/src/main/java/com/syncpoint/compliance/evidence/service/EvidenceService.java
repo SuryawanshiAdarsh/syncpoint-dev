@@ -11,6 +11,7 @@ import com.syncpoint.compliance.compliance.repository.ControlRepository;
 import com.syncpoint.compliance.evidence.dto.CreateMappingRequest;
 import com.syncpoint.compliance.evidence.dto.CreateReviewRequest;
 import com.syncpoint.compliance.evidence.dto.EvidenceResponse;
+import com.syncpoint.compliance.evidence.dto.EvidenceVersionResponse;
 import com.syncpoint.compliance.evidence.dto.MappingResponse;
 import com.syncpoint.compliance.evidence.dto.ReviewResponse;
 import com.syncpoint.compliance.evidence.entity.Evidence;
@@ -115,6 +116,85 @@ public class EvidenceService {
 
     @Transactional
     public EvidenceResponse upload(String name, String description, MultipartFile file) {
+        ValidatedFile vf = validateAndRead(file);
+        TenantContext.Principal actor = TenantContext.require();
+        Instant now = Instant.now();
+
+        Evidence evidence = evidenceRepo.save(new Evidence(
+                actor.organizationId(),
+                trim255(name != null ? name : file.getOriginalFilename()),
+                description,
+                EvidenceSourceType.MANUAL_UPLOAD,
+                "manual-upload",
+                EvidenceStatus.COLLECTED,
+                now,
+                now.plus(365, ChronoUnit.DAYS),
+                actor.userId()));
+
+        UUID storageKeyId = UUID.randomUUID();
+        String key = storage.buildKey(actor.organizationId(), evidence.getId(), storageKeyId);
+        storage.put(key, vf.bytes(), vf.mime());
+
+        EvidenceVersion version = versionRepo.save(new EvidenceVersion(
+                evidence.getId(), actor.organizationId(), 1, key, vf.hash(),
+                vf.bytes().length, vf.mime(), "manual/1", now));
+
+        audit.record(actor.organizationId(), actor.userId(),
+                AuditEvents.EVIDENCE_CREATED, "evidence", evidence.getId(),
+                Map.of("source", "MANUAL_UPLOAD", "sizeBytes", vf.bytes().length, "contentHash", vf.hash()));
+
+        return toResponse(evidence, version, List.of());
+    }
+
+    /**
+     * Adds a new version to an EXISTING evidence record (renewal) instead of creating an
+     * unrelated new record — existing control mappings stay attached since the evidence id
+     * never changes. Renewed content must be re-reviewed, so status resets to COLLECTED.
+     */
+    @Transactional
+    public EvidenceResponse addVersion(UUID evidenceId, MultipartFile file) {
+        Evidence e = requireOwned(evidenceId);
+        ValidatedFile vf = validateAndRead(file);
+        TenantContext.Principal actor = TenantContext.require();
+        Instant now = Instant.now();
+
+        int nextVersion = versionRepo.findFirstByEvidenceIdOrderByVersionDesc(e.getId())
+                .map(v -> v.getVersion() + 1)
+                .orElse(1);
+
+        UUID storageKeyId = UUID.randomUUID();
+        String key = storage.buildKey(e.getOrganizationId(), e.getId(), storageKeyId);
+        storage.put(key, vf.bytes(), vf.mime());
+
+        EvidenceVersion version = versionRepo.save(new EvidenceVersion(
+                e.getId(), e.getOrganizationId(), nextVersion, key, vf.hash(),
+                vf.bytes().length, vf.mime(), "manual/" + nextVersion, now));
+
+        e.setStatus(EvidenceStatus.COLLECTED);
+        e.setExpiresAt(now.plus(365, ChronoUnit.DAYS));
+        evidenceRepo.save(e);
+
+        audit.record(e.getOrganizationId(), actor.userId(),
+                AuditEvents.EVIDENCE_RENEWED, "evidence", e.getId(),
+                Map.of("version", nextVersion, "sizeBytes", vf.bytes().length, "contentHash", vf.hash()));
+
+        List<EvidenceControlMapping> mappings =
+                mappingRepo.findByEvidenceIdAndOrganizationId(e.getId(), e.getOrganizationId());
+        return toResponse(e, version, mappings);
+    }
+
+    @Transactional(readOnly = true)
+    public List<EvidenceVersionResponse> listVersions(UUID evidenceId) {
+        Evidence e = requireOwned(evidenceId);
+        return versionRepo.findByEvidenceIdOrderByVersionDesc(e.getId()).stream()
+                .map(v -> new EvidenceVersionResponse(
+                        v.getId(), v.getVersion(), v.getSizeBytes(), v.getMimeType(),
+                        v.getContentHash(), v.getCollectedAt(), v.getCreatedAt()))
+                .toList();
+    }
+
+    /** Shared validation for both a first upload and a renewal version. */
+    private ValidatedFile validateAndRead(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "File is required");
         }
@@ -138,43 +218,16 @@ public class EvidenceService {
         if (mime == null || mime.isBlank() || mime.equalsIgnoreCase("application/octet-stream")) {
             mime = mimeForExt(ext);
         }
-
-        TenantContext.Principal actor = TenantContext.require();
-        Instant now = Instant.now();
-
         byte[] bytes;
         try {
             bytes = file.getBytes();
-        } catch (IOException e) {
+        } catch (IOException ex) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "UPLOAD_FAILED", "Could not read upload");
         }
-        String hash = sha256Hex(bytes);
-
-        Evidence evidence = evidenceRepo.save(new Evidence(
-                actor.organizationId(),
-                trim255(name != null ? name : file.getOriginalFilename()),
-                description,
-                EvidenceSourceType.MANUAL_UPLOAD,
-                "manual-upload",
-                EvidenceStatus.COLLECTED,
-                now,
-                now.plus(365, ChronoUnit.DAYS),
-                actor.userId()));
-
-        UUID storageKeyId = UUID.randomUUID();
-        String key = storage.buildKey(actor.organizationId(), evidence.getId(), storageKeyId);
-        storage.put(key, bytes, mime);
-
-        EvidenceVersion version = versionRepo.save(new EvidenceVersion(
-                evidence.getId(), actor.organizationId(), 1, key, hash,
-                bytes.length, mime, "manual/1", now));
-
-        audit.record(actor.organizationId(), actor.userId(),
-                AuditEvents.EVIDENCE_CREATED, "evidence", evidence.getId(),
-                Map.of("source", "MANUAL_UPLOAD", "sizeBytes", bytes.length, "contentHash", hash));
-
-        return toResponse(evidence, version, List.of());
+        return new ValidatedFile(bytes, mime, sha256Hex(bytes));
     }
+
+    private record ValidatedFile(byte[] bytes, String mime, String hash) { }
 
     @Transactional
     public MappingResponse createMapping(UUID evidenceId, CreateMappingRequest req) {

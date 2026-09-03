@@ -247,6 +247,12 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
                     </button>
                     <button mat-menu-item (click)="approve(e.id)"><mat-icon>done_all</mat-icon><span>Approve evidence</span></button>
                   </mat-menu>
+                  <button *ngIf="e.freshness !== 'CURRENT'" class="btn ghost sm"
+                          (click)="renewInput.click()" [disabled]="renewing()[e.id]"
+                          [title]="c.evidence.renewEvidence">
+                    <mat-icon style="font-size:16px;height:16px;width:16px;">{{ renewing()[e.id] ? 'hourglass_top' : 'autorenew' }}</mat-icon>
+                  </button>
+                  <input #renewInput type="file" hidden (change)="renew(e.id, renewInput.files)">
                 </div>
               </td>
             </tr>
@@ -294,6 +300,7 @@ export class EvidenceComponent implements OnInit {
   uploading = signal(false);
   uploadError = signal<string | null>(null);
   analyzing = signal<Record<string, boolean>>({});
+  renewing = signal<Record<string, boolean>>({});
   msg = signal<string | null>(null);
   dragover = signal(false);
   selectedControl: Record<string, string> = {};
@@ -435,6 +442,19 @@ export class EvidenceComponent implements OnInit {
   approve(evidenceId: string): void {
     this.api.reviewEvidence(evidenceId, { decision: 'APPROVED', comments: 'OK' })
       .subscribe(() => { this.msg.set('Evidence approved.'); this.reload(); });
+  }
+
+  renew(evidenceId: string, files: FileList | null): void {
+    const file = files && files.length ? files[0] : null;
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    this.renewing.update(x => ({ ...x, [evidenceId]: true }));
+    this.api.addEvidenceVersion(evidenceId, form).subscribe({
+      next: () => { this.msg.set(this.c.evidence.renewedToast); this.reload(); },
+      error: (e) => this.uploadError.set(e?.error?.message ?? this.c.evidence.renewError),
+      complete: () => this.renewing.update(x => ({ ...x, [evidenceId]: false })),
+    });
   }
 
   sourceLabel(s: string): string { return _sourceLabel(s); }

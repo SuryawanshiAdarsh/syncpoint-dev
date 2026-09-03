@@ -1,6 +1,8 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { catchError, map, of } from 'rxjs';
 import { TokenStore } from './token-store.service';
+import { ApiService } from '../api/api.service';
 
 export const authGuard: CanActivateFn = () => {
   const store = inject(TokenStore);
@@ -16,4 +18,19 @@ export const publicGuard: CanActivateFn = () => {
   if (!store.isAuthenticated()) return true;
   router.navigateByUrl('/dashboard');
   return false;
+};
+
+/**
+ * Forces a fresh org through /onboarding until it's marked complete. Evaluated once when the
+ * authenticated shell is entered (Angular doesn't re-run a parent route's guard on child
+ * navigation), not on every page click.
+ */
+export const onboardingGuard: CanActivateFn = (_route, state) => {
+  if (state.url.startsWith('/onboarding')) return true;
+  const api = inject(ApiService);
+  const router = inject(Router);
+  return api.me().pipe(
+    map(me => (me.onboardingCompleted ? true : router.parseUrl('/onboarding'))),
+    catchError(() => of(true)),
+  );
 };

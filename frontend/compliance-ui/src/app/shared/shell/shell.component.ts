@@ -267,6 +267,7 @@ export class ShellComponent implements OnInit {
         { path: '/activity',      label: CAPTIONS.shell.navActivity,     icon: 'history' },
         { path: '/ask',           label: CAPTIONS.shell.navAsk,          icon: 'auto_awesome' } ] },
     { title: CAPTIONS.shell.sidebarSectionAudit, items: [
+        { path: '/audit-log',     label: CAPTIONS.shell.navAuditLog,     icon: 'receipt_long' },
         { path: '/audit-package', label: CAPTIONS.shell.navExport,       icon: 'inventory_2' } ] },
   ];
 

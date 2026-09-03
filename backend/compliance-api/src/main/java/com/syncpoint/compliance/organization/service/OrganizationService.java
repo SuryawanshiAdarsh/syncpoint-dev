@@ -63,6 +63,19 @@ public class OrganizationService {
         return toResponse(organizationRepository.save(org));
     }
 
+    @Transactional
+    public OrganizationResponse completeOnboarding() {
+        Organization org = getCurrentOrganization();
+        if (!org.isOnboardingCompleted()) {
+            org.completeOnboarding();
+            organizationRepository.save(org);
+            TenantContext.Principal actor = TenantContext.require();
+            auditService.record(org.getId(), actor.userId(),
+                    AuditEvents.ONBOARDING_COMPLETED, "organization", org.getId());
+        }
+        return toResponse(org);
+    }
+
     @Transactional(readOnly = true)
     public List<MemberResponse> listMembers() {
         UUID orgId = TenantContext.require().organizationId();
@@ -142,6 +155,7 @@ public class OrganizationService {
     }
 
     private OrganizationResponse toResponse(Organization org) {
-        return new OrganizationResponse(org.getId(), org.getName(), org.getSlug(), org.getCreatedAt());
+        return new OrganizationResponse(org.getId(), org.getName(), org.getSlug(), org.getCreatedAt(),
+                org.isOnboardingCompleted(), org.getOnboardingCompletedAt());
     }
 }

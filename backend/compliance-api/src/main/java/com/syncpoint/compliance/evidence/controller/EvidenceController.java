@@ -3,6 +3,7 @@ package com.syncpoint.compliance.evidence.controller;
 import com.syncpoint.compliance.evidence.dto.CreateMappingRequest;
 import com.syncpoint.compliance.evidence.dto.CreateReviewRequest;
 import com.syncpoint.compliance.evidence.dto.EvidenceResponse;
+import com.syncpoint.compliance.evidence.dto.EvidenceVersionResponse;
 import com.syncpoint.compliance.evidence.dto.MappingResponse;
 import com.syncpoint.compliance.evidence.dto.ReviewResponse;
 import com.syncpoint.compliance.evidence.service.EvidenceService;
@@ -58,6 +59,18 @@ public class EvidenceController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<EvidenceVersionResponse>> versions(@PathVariable UUID id) {
+        return ResponseEntity.ok(service.listVersions(id));
+    }
+
+    @PostMapping(value = "/{id}/versions", consumes = { "multipart/form-data" })
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN','REVIEWER')")
+    public ResponseEntity<EvidenceResponse> addVersion(@PathVariable UUID id,
+                                                       @RequestParam("file") MultipartFile file) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addVersion(id, file));
     }
 
     @GetMapping("/{id}/mappings")

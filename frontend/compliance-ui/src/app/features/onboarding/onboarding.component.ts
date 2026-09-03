@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
@@ -185,7 +185,10 @@ import { CAPTIONS } from '@captions';
             <span *ngIf="!hasCoverage()">{{ c.onboarding.step5Body }}</span>
           </p>
           <div class="step-cta">
-            <a routerLink="/dashboard" class="btn ghost"><mat-icon>insights</mat-icon>Open dashboard</a>
+            <button class="btn primary" [disabled]="finishing()" (click)="finishSetup()">
+              <mat-icon>{{ finishing() ? 'hourglass_top' : 'insights' }}</mat-icon>
+              {{ finishing() ? 'Finishing…' : 'Finish setup' }}
+            </button>
           </div>
         </div>
       </div>
@@ -195,11 +198,13 @@ import { CAPTIONS } from '@captions';
 export class OnboardingComponent implements OnInit {
   readonly c = CAPTIONS;
   private readonly api = inject(ApiService);
+  private readonly router = inject(Router);
 
   framework = signal<Framework | null>(null);
   integrations = signal<Integration[]>([]);
   evidence = signal<Evidence[]>([]);
   summary = signal<DashboardSummary | null>(null);
+  finishing = signal(false);
 
   hasIntegration = computed(() => this.integrations().length > 0);
   hasEvidence    = computed(() => this.evidence().length > 0);
@@ -236,6 +241,14 @@ export class OnboardingComponent implements OnInit {
       this.integrations.set(i);
       this.evidence.set(e);
       this.summary.set(s);
+    });
+  }
+
+  finishSetup(): void {
+    this.finishing.set(true);
+    this.api.completeOnboarding().subscribe({
+      next: () => this.router.navigateByUrl('/dashboard'),
+      error: () => this.finishing.set(false),
     });
   }
 }

@@ -10,6 +10,7 @@ public record MeResponse(
         String name,
         UUID organizationId,
         String organizationName,
-        Role role
+        Role role,
+        boolean onboardingCompleted
 ) {
 }

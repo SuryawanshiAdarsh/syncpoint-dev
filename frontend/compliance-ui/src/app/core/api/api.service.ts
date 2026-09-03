@@ -4,9 +4,9 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
-  Control, ControlGap, ControlMapping, AiAnalysisSummary, CollectionRun, CollectionRunDetail,
-  DashboardSummary, Evidence, ExportJob, Framework, Integration, Mapping, Me, Member, Organization,
-  TokenResponse
+  Control, ControlGap, ControlMapping, AiAnalysisSummary, AuditEvent, CollectionRun, CollectionRunDetail,
+  DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
+  Member, Organization, TokenResponse
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +42,12 @@ export class ApiService {
   evidenceById(id: string): Observable<Evidence> { return this.http.get<Evidence>(`${this.base}/evidence/${id}`); }
   uploadEvidence(form: FormData): Observable<Evidence> {
     return this.http.post<Evidence>(`${this.base}/evidence/upload`, form);
+  }
+  evidenceVersions(evidenceId: string): Observable<EvidenceVersion[]> {
+    return this.http.get<EvidenceVersion[]>(`${this.base}/evidence/${evidenceId}/versions`);
+  }
+  addEvidenceVersion(evidenceId: string, form: FormData): Observable<Evidence> {
+    return this.http.post<Evidence>(`${this.base}/evidence/${evidenceId}/versions`, form);
   }
   mappings(evidenceId: string): Observable<Mapping[]> {
     return this.http.get<Mapping[]>(`${this.base}/evidence/${evidenceId}/mappings`);
@@ -90,6 +96,9 @@ export class ApiService {
   updateOrganization(body: { name: string }): Observable<Organization> {
     return this.http.patch<Organization>(`${this.base}/organizations/current`, body);
   }
+  completeOnboarding(): Observable<Organization> {
+    return this.http.post<Organization>(`${this.base}/organizations/current/onboarding/complete`, {});
+  }
   members(): Observable<Member[]> {
     return this.http.get<Member[]>(`${this.base}/organizations/current/members`);
   }
@@ -109,6 +118,11 @@ export class ApiService {
   }
   collectionRun(id: string): Observable<CollectionRunDetail> {
     return this.http.get<CollectionRunDetail>(`${this.base}/collections/${id}`);
+  }
+
+  // Audit log
+  auditEvents(): Observable<AuditEvent[]> {
+    return this.http.get<AuditEvent[]>(`${this.base}/audit-events`);
   }
 
   // Dashboard

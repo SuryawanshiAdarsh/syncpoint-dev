@@ -42,6 +42,11 @@ public class OrganizationController {
         return ResponseEntity.ok(organizationService.updateCurrent(req));
     }
 
+    @PostMapping("/onboarding/complete")
+    public ResponseEntity<OrganizationResponse> completeOnboarding() {
+        return ResponseEntity.ok(organizationService.completeOnboarding());
+    }
+
     @GetMapping("/members")
     public ResponseEntity<List<MemberResponse>> members() {
         return ResponseEntity.ok(organizationService.listMembers());

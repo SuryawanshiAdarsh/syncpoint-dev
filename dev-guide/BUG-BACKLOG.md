@@ -12,6 +12,9 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 | [BUG-003](#bug-003-soc-2-badge-is-hardcoded-instead-of-read-from-the-orgs-active-framework) | Open |
 | [BUG-004](#bug-004-demo-label-is-hardcoded-instead-of-driven-by-environment-config) | Open |
 | [BUG-005](#bug-005-no-versioned-acceptance-tracking-for-legal-documents) | Open |
+| [BUG-006](#bug-006-password-reset--email-verification-missing) | Parked |
+| [BUG-007](#bug-007-no-notificationdigest-emails) | Parked |
+| [BUG-008](#bug-008-no-bulk-actions-for-mappingevidence-review) | Parked |
 
 ---
 
@@ -158,3 +161,56 @@ by a DB pointer), so "customer X accepted version 3 of the DPA on date Y" is pro
 This is a feature, not a bug — logged here per user request, but should graduate to
 [ROADMAP.md](ROADMAP.md) / [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) once scheduled,
 since it gates real customer contracts rather than being a defect in existing behavior.
+
+---
+
+## BUG-006: Password reset / email verification missing
+
+- **Severity**: Blocks any real customer eventually; not a defect in the current MVP
+- **Area**: Backend (new) — `auth` module
+- **Found**: 2026-09-03, PO prioritization pass (confirmed: no `forgot-password`/`reset-password`/
+  `verify-email` endpoints exist anywhere in `auth/controller`).
+
+### Symptom
+There is no way for a user to recover a forgotten password or verify their email on signup. Any
+real customer will hit this eventually (a locked-out OWNER has no self-serve recovery path).
+
+### Why deferred
+Account hygiene, not compliance-workflow value — doesn't advance the SOC 2 automation mission
+today. Parked per user request in favor of Evidence Versioning and the Audit Log Viewer. Must be
+built before onboarding any real paying customer (see [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) §3.2).
+
+---
+
+## BUG-007: No notification/digest emails
+
+- **Severity**: P3 — valuable automation, not a defect
+- **Area**: New — no email-sending infrastructure exists at all today
+- **Found**: 2026-09-03, PO prioritization pass.
+
+### Symptom
+Nothing proactively tells a user that evidence is expiring, a scheduled collection failed, or
+coverage changed week over week. Everything today is pull-based (the user has to open the
+Review Queue / Activity dashboard to find out).
+
+### Why deferred
+Needs real infrastructure first (an email-sending service, templates, a scheduler for digests) that
+doesn't exist yet — a materially bigger lift than the workflows being prioritized now. Good
+candidate for Phase E once the core Collect → Review → Export loop is airtight.
+
+---
+
+## BUG-008: No bulk actions for mapping/evidence review
+
+- **Severity**: P3 — efficiency nice-to-have, not a missing capability
+- **Area**: Frontend — Control Detail, Evidence Library, Review Queue
+- **Found**: 2026-09-03, PO prioritization pass.
+
+### Symptom
+Confirm/reject and approve/analyze actions are all one-row-at-a-time. A reviewer with a large
+backlog of AI-suggested mappings has no way to select several and confirm them together.
+
+### Why deferred
+Every individual action already works correctly (Workflow 1) — this is a throughput improvement on
+top of a working flow, not a gap in capability. Revisit once real usage volume shows it's actually
+a bottleneck.

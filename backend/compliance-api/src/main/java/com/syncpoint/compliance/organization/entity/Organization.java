@@ -31,6 +31,12 @@ public class Organization {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "onboarding_completed", nullable = false)
+    private boolean onboardingCompleted = false;
+
+    @Column(name = "onboarding_completed_at")
+    private Instant onboardingCompletedAt;
+
     public Organization() {
     }
 
@@ -60,6 +66,12 @@ public class Organization {
     public void setSlug(String slug) { this.slug = slug; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public boolean isOnboardingCompleted() { return onboardingCompleted; }
+    public Instant getOnboardingCompletedAt() { return onboardingCompletedAt; }
+    public void completeOnboarding() {
+        this.onboardingCompleted = true;
+        this.onboardingCompletedAt = Instant.now();
+    }
 
     @Override
     public boolean equals(Object o) {
