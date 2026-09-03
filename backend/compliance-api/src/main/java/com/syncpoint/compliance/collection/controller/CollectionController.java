@@ -3,6 +3,7 @@ package com.syncpoint.compliance.collection.controller;
 import com.syncpoint.compliance.collection.dto.CollectionItemResponse;
 import com.syncpoint.compliance.collection.dto.CollectionRunResponse;
 import com.syncpoint.compliance.collection.entity.CollectionItem;
+import com.syncpoint.compliance.collection.entity.CollectionItemStatus;
 import com.syncpoint.compliance.collection.entity.CollectionRun;
 import com.syncpoint.compliance.collection.repository.CollectionItemRepository;
 import com.syncpoint.compliance.collection.repository.CollectionRunRepository;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,7 +40,9 @@ public class CollectionController {
         List<CollectionRun> list = integrationId == null
                 ? runs.findByOrganizationIdOrderByCreatedAtDesc(orgId)
                 : runs.findByOrganizationIdAndIntegrationIdOrderByCreatedAtDesc(orgId, integrationId);
-        return ResponseEntity.ok(list.stream().map(this::toRun).toList());
+
+        Map<UUID, long[]> tallyByRun = tally(list.stream().map(CollectionRun::getId).toList());
+        return ResponseEntity.ok(list.stream().map(r -> toRun(r, tallyByRun)).toList());
     }
 
     @GetMapping("/{id}")
@@ -48,12 +52,32 @@ public class CollectionController {
                 .orElseThrow(() -> new NotFoundException("Collection run not found"));
         List<CollectionItemResponse> itemDtos = items.findByRunIdOrderByCreatedAt(run.getId()).stream()
                 .map(this::toItem).toList();
-        return ResponseEntity.ok(Map.of("run", toRun(run), "items", itemDtos));
+        Map<UUID, long[]> tallyByRun = tally(List.of(run.getId()));
+        return ResponseEntity.ok(Map.of("run", toRun(run, tallyByRun), "items", itemDtos));
     }
 
-    private CollectionRunResponse toRun(CollectionRun r) {
-        return new CollectionRunResponse(r.getId(), r.getIntegrationId(), r.getStatus(),
-                r.getStartedAt(), r.getCompletedAt(), r.getErrorMessage(), r.getCreatedAt());
+    /** One batched query for however many runs are being rendered — never N+1 per row. */
+    private Map<UUID, long[]> tally(List<UUID> runIds) {
+        if (runIds.isEmpty()) return Map.of();
+        Map<UUID, long[]> byRun = new java.util.HashMap<>();
+        for (CollectionItemRepository.StatusTally t : items.tallyByRunIds(runIds)) {
+            long[] counts = byRun.computeIfAbsent(t.getRunId(), k -> new long[2]); // [ok, failed]
+            if (t.getStatus() == CollectionItemStatus.SUCCESS) counts[0] += t.getTotal();
+            else if (t.getStatus() == CollectionItemStatus.FAILED) counts[1] += t.getTotal();
+        }
+        return byRun;
+    }
+
+    private CollectionRunResponse toRun(CollectionRun r, Map<UUID, long[]> tallyByRun) {
+        long[] counts = tallyByRun.getOrDefault(r.getId(), new long[2]);
+        long ok = counts[0];
+        long failed = counts[1];
+        Long durationMs = (r.getStartedAt() != null && r.getCompletedAt() != null)
+                ? Duration.between(r.getStartedAt(), r.getCompletedAt()).toMillis()
+                : null;
+        return new CollectionRunResponse(r.getId(), r.getIntegrationId(), r.getStatus(), r.getTrigger(),
+                r.getStartedAt(), r.getCompletedAt(), r.getErrorMessage(), r.getCreatedAt(),
+                ok, failed, ok + failed, durationMs);
     }
 
     private CollectionItemResponse toItem(CollectionItem i) {

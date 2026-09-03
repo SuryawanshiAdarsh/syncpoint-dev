@@ -3,6 +3,7 @@ package com.syncpoint.compliance.integrations.service;
 import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.service.AuditService;
 import com.syncpoint.compliance.collection.entity.CollectionRun;
+import com.syncpoint.compliance.collection.entity.CollectionTrigger;
 import com.syncpoint.compliance.collection.repository.CollectionRunRepository;
 import com.syncpoint.compliance.common.exception.ApiException;
 import com.syncpoint.compliance.common.exception.NotFoundException;
@@ -135,12 +136,40 @@ public class IntegrationService {
                     "Provider not yet implemented: " + i.getProvider());
         }
         CollectionRun run = runs.save(new CollectionRun(i.getOrganizationId(), i.getId(),
-                TenantContext.require().userId()));
+                TenantContext.require().userId(), CollectionTrigger.MANUAL));
         audit.record(i.getOrganizationId(), TenantContext.require().userId(),
                 AuditEvents.COLLECTION_STARTED, "collection_run", run.getId(),
-                Map.of("provider", i.getProvider().name(), "integrationId", i.getId().toString()));
+                Map.of("provider", i.getProvider().name(), "integrationId", i.getId().toString(),
+                        "trigger", "MANUAL"));
         collectionRunner.run(run.getId(), i.getId());
         return run.getId();
+    }
+
+    /**
+     * Background-sweep entry point — no HTTP request, no logged-in user, so it cannot use
+     * {@link TenantContext}. The integration's creator stands in as the audit actor.
+     */
+    @Transactional
+    public UUID triggerScheduledCollection(Integration i) {
+        CollectionRun run = runs.save(new CollectionRun(i.getOrganizationId(), i.getId(),
+                i.getCreatedBy(), CollectionTrigger.SCHEDULED));
+        audit.record(i.getOrganizationId(), i.getCreatedBy(),
+                AuditEvents.COLLECTION_STARTED, "collection_run", run.getId(),
+                Map.of("provider", i.getProvider().name(), "integrationId", i.getId().toString(),
+                        "trigger", "SCHEDULED"));
+        collectionRunner.run(run.getId(), i.getId());
+        return run.getId();
+    }
+
+    @Transactional
+    public IntegrationResponse updateSchedule(UUID integrationId, IntegrationSchedule schedule) {
+        Integration i = requireOwned(integrationId);
+        i.setSchedule(schedule);
+        integrationRepo.save(i);
+        audit.record(i.getOrganizationId(), TenantContext.require().userId(),
+                AuditEvents.INTEGRATION_SCHEDULE_UPDATED, "integration", i.getId(),
+                Map.of("provider", i.getProvider().name(), "schedule", schedule.name()));
+        return toResponse(i);
     }
 
     @Transactional

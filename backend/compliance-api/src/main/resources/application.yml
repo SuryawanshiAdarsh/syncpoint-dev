@@ -53,6 +53,10 @@ syncpoint:
     rate-limit:
       auth-max: ${AUTH_RATE_LIMIT_MAX:20}
       window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+  collection:
+    # How often the background job checks for DAILY/WEEKLY integrations that are due.
+    # Standard cron (seconds field first). Default: top of every hour.
+    sweep-cron: ${COLLECTION_SWEEP_CRON:0 0 * * * *}
 
 management:
   endpoints:

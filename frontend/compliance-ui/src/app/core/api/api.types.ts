@@ -5,13 +5,15 @@ export interface TokenResponse {
   expiresIn: number;
 }
 
+export type Role = 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER';
+
 export interface Me {
   userId: string;
   email: string;
   name: string;
   organizationId: string;
   organizationName: string;
-  role: 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER';
+  role: Role;
 }
 
 export type ControlStatus = 'COVERED' | 'PARTIAL' | 'MISSING' | 'NEEDS_REVIEW';
@@ -118,6 +120,22 @@ export interface Integration {
   createdAt: string;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+}
+
+export interface Member {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: Role;
+  createdAt: string;
+}
+
 export interface DashboardSummary {
   totalControls: number;
   byStatus: Record<ControlStatus, number>;
@@ -133,6 +151,39 @@ export interface ControlGap {
   title: string;
   category: string;
   status: ControlStatus;
+}
+
+export type CollectionRunStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'PARTIAL' | 'FAILED';
+export type CollectionTrigger = 'MANUAL' | 'SCHEDULED';
+export type CollectionItemStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED';
+
+export interface CollectionRun {
+  id: string;
+  integrationId: string;
+  status: CollectionRunStatus;
+  trigger: CollectionTrigger;
+  startedAt?: string;
+  completedAt?: string;
+  errorMessage?: string;
+  createdAt: string;
+  itemsOk: number;
+  itemsFailed: number;
+  itemsTotal: number;
+  durationMs?: number;
+}
+
+export interface CollectionItem {
+  id: string;
+  evidenceType: string;
+  status: CollectionItemStatus;
+  message?: string;
+  evidenceId?: string;
+  createdAt: string;
+}
+
+export interface CollectionRunDetail {
+  run: CollectionRun;
+  items: CollectionItem[];
 }
 
 export interface ExportJob {

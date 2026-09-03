@@ -3,6 +3,7 @@ package com.syncpoint.compliance.integrations.controller;
 import com.syncpoint.compliance.integrations.dto.GitHubIntegrationRequest;
 import com.syncpoint.compliance.integrations.dto.IntegrationResponse;
 import com.syncpoint.compliance.integrations.dto.TestConnectionResponse;
+import com.syncpoint.compliance.integrations.dto.UpdateScheduleRequest;
 import com.syncpoint.compliance.integrations.service.IntegrationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -57,6 +59,13 @@ public class IntegrationController {
     public ResponseEntity<Map<String, Object>> collect(@PathVariable UUID id) {
         UUID runId = integrationService.triggerCollection(id);
         return ResponseEntity.accepted().body(Map.of("collectionRunId", runId));
+    }
+
+    @PatchMapping("/{id}/schedule")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<IntegrationResponse> updateSchedule(@PathVariable UUID id,
+                                                              @Valid @RequestBody UpdateScheduleRequest req) {
+        return ResponseEntity.ok(integrationService.updateSchedule(id, req.schedule()));
     }
 
     @DeleteMapping("/{id}")

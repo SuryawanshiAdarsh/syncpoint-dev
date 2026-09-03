@@ -24,9 +24,11 @@ export const routes: Routes = [
       { path: 'controls/:id', loadComponent: () => import('./features/controls/control-detail.component').then(m => m.ControlDetailComponent) },
       { path: 'evidence',     loadComponent: () => import('./features/evidence/evidence.component').then(m => m.EvidenceComponent) },
       { path: 'integrations', loadComponent: () => import('./features/integrations/integrations.component').then(m => m.IntegrationsComponent) },
+      { path: 'activity',     loadComponent: () => import('./features/activity/activity.component').then(m => m.ActivityComponent) },
       { path: 'onboarding',   loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
       { path: 'ask',          loadComponent: () => import('./features/ask/ask.component').then(m => m.AskComponent) },
       { path: 'audit-package', loadComponent: () => import('./features/export/export.component').then(m => m.ExportComponent) },
+      { path: 'settings',      loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent) },
     ]
   },
   { path: '**', redirectTo: 'dashboard' },

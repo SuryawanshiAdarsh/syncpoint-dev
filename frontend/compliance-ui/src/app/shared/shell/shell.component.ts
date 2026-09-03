@@ -224,6 +224,9 @@ interface NavSection { title: string; items: NavItem[]; }
               <button mat-menu-item routerLink="/onboarding">
                 <mat-icon>rocket_launch</mat-icon><span>{{ c.common.restartOnboarding }}</span>
               </button>
+              <button mat-menu-item routerLink="/settings">
+                <mat-icon>settings</mat-icon><span>{{ c.common.settings }}</span>
+              </button>
               <button mat-menu-item (click)="logout()">
                 <mat-icon>logout</mat-icon><span>{{ c.common.signOut }}</span>
               </button>
@@ -261,6 +264,7 @@ export class ShellComponent implements OnInit {
         { path: '/evidence',      label: CAPTIONS.shell.navEvidence,     icon: 'description' } ] },
     { title: CAPTIONS.shell.sidebarSectionAutomation, items: [
         { path: '/integrations',  label: CAPTIONS.shell.navIntegrations, icon: 'hub' },
+        { path: '/activity',      label: CAPTIONS.shell.navActivity,     icon: 'history' },
         { path: '/ask',           label: CAPTIONS.shell.navAsk,          icon: 'auto_awesome' } ] },
     { title: CAPTIONS.shell.sidebarSectionAudit, items: [
         { path: '/audit-package', label: CAPTIONS.shell.navExport,       icon: 'inventory_2' } ] },

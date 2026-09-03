@@ -4,8 +4,9 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
-  Control, ControlGap, ControlMapping, AiAnalysisSummary, DashboardSummary, Evidence, ExportJob, Framework,
-  Integration, Mapping, Me, TokenResponse
+  Control, ControlGap, ControlMapping, AiAnalysisSummary, CollectionRun, CollectionRunDetail,
+  DashboardSummary, Evidence, ExportJob, Framework, Integration, Mapping, Me, Member, Organization,
+  TokenResponse
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -77,6 +78,37 @@ export class ApiService {
   }
   disconnectIntegration(id: string): Observable<unknown> {
     return this.http.delete(`${this.base}/integrations/${id}`);
+  }
+  updateIntegrationSchedule(id: string, schedule: 'MANUAL' | 'DAILY' | 'WEEKLY'): Observable<Integration> {
+    return this.http.patch<Integration>(`${this.base}/integrations/${id}/schedule`, { schedule });
+  }
+
+  // Organization settings
+  organization(): Observable<Organization> {
+    return this.http.get<Organization>(`${this.base}/organizations/current`);
+  }
+  updateOrganization(body: { name: string }): Observable<Organization> {
+    return this.http.patch<Organization>(`${this.base}/organizations/current`, body);
+  }
+  members(): Observable<Member[]> {
+    return this.http.get<Member[]>(`${this.base}/organizations/current/members`);
+  }
+  addMember(body: { email: string; name: string; password: string; role: string }): Observable<Member> {
+    return this.http.post<Member>(`${this.base}/organizations/current/members`, body);
+  }
+  updateMemberRole(memberId: string, role: string): Observable<Member> {
+    return this.http.patch<Member>(`${this.base}/organizations/current/members/${memberId}`, { role });
+  }
+
+  // Collection activity
+  collectionRuns(integrationId?: string): Observable<CollectionRun[]> {
+    const url = integrationId
+      ? `${this.base}/collections?integrationId=${integrationId}`
+      : `${this.base}/collections`;
+    return this.http.get<CollectionRun[]>(url);
+  }
+  collectionRun(id: string): Observable<CollectionRunDetail> {
+    return this.http.get<CollectionRunDetail>(`${this.base}/collections/${id}`);
   }
 
   // Dashboard

@@ -41,16 +41,21 @@ public class CollectionRun {
     @Column(name = "triggered_by")
     private UUID triggeredBy;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private CollectionTrigger trigger;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     public CollectionRun() {
     }
 
-    public CollectionRun(UUID organizationId, UUID integrationId, UUID triggeredBy) {
+    public CollectionRun(UUID organizationId, UUID integrationId, UUID triggeredBy, CollectionTrigger trigger) {
         this.organizationId = organizationId;
         this.integrationId = integrationId;
         this.triggeredBy = triggeredBy;
+        this.trigger = trigger;
         this.status = CollectionRunStatus.QUEUED;
     }
 
@@ -72,5 +77,6 @@ public class CollectionRun {
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public UUID getTriggeredBy() { return triggeredBy; }
+    public CollectionTrigger getTrigger() { return trigger; }
     public Instant getCreatedAt() { return createdAt; }
 }
