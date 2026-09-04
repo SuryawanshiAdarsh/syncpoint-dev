@@ -6,7 +6,9 @@ import { environment } from '../../../environments/environment';
 import {
   Control, ControlGap, ControlMapping, AiAnalysisSummary, AuditEvent, CollectionRun, CollectionRunDetail,
   CoverageTrendPoint, DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
-  Member, Organization, TokenResponse
+  Member, Organization, TokenResponse,
+  AdminOrganizationSummary, AdminOrganizationDetail, UpdateSubscriptionRequest, SubscriptionResponse,
+  CreateSubscriptionRequestBody, SubscriptionRequestResponse, AdminSubscriptionRequestResponse
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -22,6 +24,18 @@ export class ApiService {
     return this.http.post<TokenResponse>(`${this.base}/auth/login`, body);
   }
   me(): Observable<Me> { return this.http.get<Me>(`${this.base}/auth/me`); }
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/auth/forgot-password`, { email });
+  }
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/auth/reset-password`, { token, newPassword });
+  }
+  acceptInvite(token: string, newPassword: string): Observable<TokenResponse> {
+    return this.http.post<TokenResponse>(`${this.base}/auth/accept-invite`, { token, newPassword });
+  }
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/auth/verify-email`, { token });
+  }
 
   // Frameworks + controls
   frameworks(): Observable<Framework[]> { return this.http.get<Framework[]>(`${this.base}/frameworks`); }
@@ -102,11 +116,23 @@ export class ApiService {
   members(): Observable<Member[]> {
     return this.http.get<Member[]>(`${this.base}/organizations/current/members`);
   }
-  addMember(body: { email: string; name: string; password: string; role: string }): Observable<Member> {
+  addMember(body: { email: string; name: string; role: string }): Observable<Member> {
     return this.http.post<Member>(`${this.base}/organizations/current/members`, body);
   }
   updateMemberRole(memberId: string, role: string): Observable<Member> {
     return this.http.patch<Member>(`${this.base}/organizations/current/members/${memberId}`, { role });
+  }
+  subscription(): Observable<SubscriptionResponse> {
+    return this.http.get<SubscriptionResponse>(`${this.base}/organizations/current/subscription`);
+  }
+  subscriptionRequests(): Observable<SubscriptionRequestResponse[]> {
+    return this.http.get<SubscriptionRequestResponse[]>(`${this.base}/organizations/current/subscription/requests`);
+  }
+  createSubscriptionRequest(body: CreateSubscriptionRequestBody): Observable<SubscriptionRequestResponse> {
+    return this.http.post<SubscriptionRequestResponse>(`${this.base}/organizations/current/subscription/requests`, body);
+  }
+  revokeSubscriptionRequest(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/organizations/current/subscription/requests/${id}/revoke`, {});
   }
 
   // Collection activity
@@ -142,5 +168,25 @@ export class ApiService {
   }
   exportDownloadUrl(id: string): string {
     return `${this.base}/exports/${id}/download`;
+  }
+
+  // Platform admin console
+  adminOrganizations(): Observable<AdminOrganizationSummary[]> {
+    return this.http.get<AdminOrganizationSummary[]>(`${this.base}/admin/organizations`);
+  }
+  adminOrganization(id: string): Observable<AdminOrganizationDetail> {
+    return this.http.get<AdminOrganizationDetail>(`${this.base}/admin/organizations/${id}`);
+  }
+  updateAdminSubscription(id: string, body: UpdateSubscriptionRequest): Observable<AdminOrganizationSummary> {
+    return this.http.patch<AdminOrganizationSummary>(`${this.base}/admin/organizations/${id}/subscription`, body);
+  }
+  adminSubscriptionRequests(status: 'PENDING' | 'ALL' = 'PENDING'): Observable<AdminSubscriptionRequestResponse[]> {
+    return this.http.get<AdminSubscriptionRequestResponse[]>(`${this.base}/admin/subscription-requests?status=${status}`);
+  }
+  approveSubscriptionRequest(id: string): Observable<AdminSubscriptionRequestResponse> {
+    return this.http.post<AdminSubscriptionRequestResponse>(`${this.base}/admin/subscription-requests/${id}/approve`, {});
+  }
+  rejectSubscriptionRequest(id: string, reviewNote?: string): Observable<AdminSubscriptionRequestResponse> {
+    return this.http.post<AdminSubscriptionRequestResponse>(`${this.base}/admin/subscription-requests/${id}/reject`, { reviewNote });
   }
 }

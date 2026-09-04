@@ -3,6 +3,7 @@
  * Backed by status-meta.ts + captions.ts — single source of truth.
  */
 import { CAPTIONS } from '../captions';
+import type { UiBadgeVariant } from '../ui/ui-badge.component';
 import {
   CONTROL_STATUS_META,
   EVIDENCE_STATUS_META,
@@ -13,6 +14,22 @@ import {
   UNKNOWN_META,
   type StatusVisual,
 } from './status-meta';
+
+// ─── Semantic color → CSS custom property ──────────────────────────
+// Single place mapping a StatusVisual's semantic color name to the actual
+// design-token variable, so charts/SVG (which can't use the .success/.warning
+// CSS classes) still draw from the same palette as every badge/tile.
+const SEMANTIC_COLOR_VAR: Readonly<Record<StatusVisual['color'], string>> = {
+  success: 'var(--color-success)',
+  warning: 'var(--color-warning)',
+  danger:  'var(--color-danger)',
+  info:    'var(--color-info)',
+  brand:   'var(--color-primary)',
+  neutral: 'var(--color-text-muted)',
+};
+export function statusColorVar(visual: StatusVisual): string {
+  return SEMANTIC_COLOR_VAR[visual.color];
+}
 
 // ─── Control status ─────────────────────────────────────────────────
 export function controlStatusMeta(code: string): StatusVisual {
@@ -86,4 +103,35 @@ export function freshnessClass(code: string): string {
     EXPIRING: 'partial',
     EXPIRED:  'missing',
   } as Record<string, string>)[code] ?? '';
+}
+
+// ─── Subscription plan / status (Settings > Billing, Admin console) ────────
+const SUBSCRIPTION_STATUS_BADGE_VARIANT: Readonly<Record<string, UiBadgeVariant>> = {
+  TRIALING:  'info',
+  ACTIVE:    'success',
+  PAST_DUE:  'warning',
+  CANCELED:  'neutral',
+  SUSPENDED: 'error',
+};
+export function subscriptionStatusBadgeVariant(status: string): UiBadgeVariant {
+  return SUBSCRIPTION_STATUS_BADGE_VARIANT[status] ?? 'neutral';
+}
+export function subscriptionStatusLabel(status: string): string {
+  return (CAPTIONS.admin as Record<string, string>)[`SUB_${status}`] ?? status;
+}
+export function subscriptionPlanLabel(plan: string): string {
+  return (CAPTIONS.admin as Record<string, string>)[`PLAN_${plan}`] ?? plan;
+}
+
+const SUBSCRIPTION_REQUEST_STATUS_BADGE_VARIANT: Readonly<Record<string, UiBadgeVariant>> = {
+  PENDING:  'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+  CANCELED: 'neutral',
+};
+export function subscriptionRequestStatusBadgeVariant(status: string): UiBadgeVariant {
+  return SUBSCRIPTION_REQUEST_STATUS_BADGE_VARIANT[status] ?? 'neutral';
+}
+export function subscriptionRequestStatusLabel(status: string): string {
+  return (CAPTIONS.admin as Record<string, string>)[`REQ_${status}`] ?? status;
 }

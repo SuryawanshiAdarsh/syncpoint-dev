@@ -27,7 +27,7 @@ class JwtServiceTest {
         UUID userId = UUID.randomUUID();
         UUID orgId = UUID.randomUUID();
 
-        String token = service.createAccessToken(userId, "alice@example.com", orgId, Role.OWNER);
+        String token = service.createAccessToken(userId, "alice@example.com", orgId, Role.OWNER, true);
         Claims claims = service.parseAccess(token);
 
         assertThat(claims.getSubject()).isEqualTo(userId.toString());
@@ -35,18 +35,19 @@ class JwtServiceTest {
         assertThat(claims.get("orgId", String.class)).isEqualTo(orgId.toString());
         assertThat(claims.get("role", String.class)).isEqualTo("OWNER");
         assertThat(claims.get("typ", String.class)).isEqualTo("access");
+        assertThat(claims.get("platformAdmin", Boolean.class)).isTrue();
         assertThat(claims.getIssuer()).isEqualTo("syncpoint-test");
     }
 
     @Test
     void refresh_token_cannot_be_parsed_as_access() {
-        String refresh = service.createRefreshToken(UUID.randomUUID(), "x@y", UUID.randomUUID(), Role.VIEWER);
+        String refresh = service.createRefreshToken(UUID.randomUUID(), "x@y", UUID.randomUUID(), Role.VIEWER, false);
         assertThatThrownBy(() -> service.parseAccess(refresh)).isInstanceOf(JwtException.class);
     }
 
     @Test
     void tampered_token_is_rejected() {
-        String token = service.createAccessToken(UUID.randomUUID(), "x@y", UUID.randomUUID(), Role.VIEWER);
+        String token = service.createAccessToken(UUID.randomUUID(), "x@y", UUID.randomUUID(), Role.VIEWER, false);
         String tampered = token.substring(0, token.length() - 4) + "AAAA";
         assertThatThrownBy(() -> service.parseAccess(tampered)).isInstanceOf(JwtException.class);
     }

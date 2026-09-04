@@ -12,9 +12,11 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 | [BUG-003](#bug-003-soc-2-badge-is-hardcoded-instead-of-read-from-the-orgs-active-framework) | Open |
 | [BUG-004](#bug-004-demo-label-is-hardcoded-instead-of-driven-by-environment-config) | Open |
 | [BUG-005](#bug-005-no-versioned-acceptance-tracking-for-legal-documents) | Open |
-| [BUG-006](#bug-006-password-reset--email-verification-missing) | Parked |
+| [BUG-006](#bug-006-password-reset--email-verification-missing) | Fixed (2026-09-04) |
 | [BUG-007](#bug-007-no-notificationdigest-emails) | Parked |
 | [BUG-008](#bug-008-no-bulk-actions-for-mappingevidence-review) | Parked |
+| [BUG-009](#bug-009-password-reset-does-not-revoke-existing-refresh-tokenssessions) | Parked |
+| [BUG-010](#bug-010-no-check-against-known-breached-passwords) | Parked |
 
 ---
 
@@ -193,6 +195,13 @@ Account hygiene, not compliance-workflow value — doesn't advance the SOC 2 aut
 today. Parked per user request in favor of Evidence Versioning and the Audit Log Viewer. Must be
 built before onboarding any real paying customer (see [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md) §3.2).
 
+### Resolution (2026-09-04)
+Shipped: password reset, email verification, and member-invite-by-email all landed together,
+backed by one `auth_tokens` table (hashed, single-use, expiring tokens) and a local Mailpit SMTP
+catcher for dev email (zero external account needed; swap `MAIL_HOST`/`MAIL_PORT` for a real
+provider in production). Verified end-to-end via real captured emails, not mocks. Two follow-on
+gaps discovered during the security review of this work are logged separately as BUG-009/BUG-010.
+
 ---
 
 ## BUG-007: No notification/digest emails
@@ -227,3 +236,55 @@ backlog of AI-suggested mappings has no way to select several and confirm them t
 Every individual action already works correctly (Workflow 1) — this is a throughput improvement on
 top of a working flow, not a gap in capability. Revisit once real usage volume shows it's actually
 a bottleneck.
+
+---
+
+## BUG-009: Password reset does not revoke existing refresh tokens/sessions
+
+- **Severity**: P2 — real security gap, not a first-customer blocker on its own
+- **Area**: Backend — `auth` module (`AuthService.refresh()`, `JwtService`)
+- **Found**: 2026-09-04, security review immediately after shipping password reset.
+
+### Symptom
+Refresh tokens are stateless signed JWTs with no revocation list or version check anywhere in the
+codebase. Resetting a password (via `/auth/reset-password`) updates `password_hash` but does not
+invalidate any refresh token issued before the reset. If an attacker obtained a valid refresh
+token before the legitimate user reset their password — the exact scenario a reset is meant to
+recover from — that stolen token keeps working for up to its full 7-day lifetime regardless.
+
+### Proposed fix
+Add a `token_version` (or `sessions_invalidated_at`) column on `users`, bump it on password reset,
+and embed the version in both access and refresh JWTs; `refresh()` (and ideally the auth filter for
+access tokens too) rejects any token whose embedded version doesn't match the current one. Simpler
+alternative: a small `revoked_before` timestamp column checked against the token's `iat` claim —
+same effect, no version bookkeeping.
+
+### Why deferred
+Not part of the original password-reset scope; the underlying "refresh tokens have no revocation
+mechanism at all" gap already existed and is tracked generally in `STATUS.md`. Logged here
+specifically because password reset is the one flow where the absence of revocation has an obvious,
+concrete security consequence.
+
+---
+
+## BUG-010: No check against known-breached passwords
+
+- **Severity**: P3 — defense in depth, not a missing capability
+- **Area**: Backend — `auth` module (register, reset-password, accept-invite)
+- **Found**: 2026-09-04, security review immediately after shipping password reset.
+
+### Symptom
+Password validation is length-only (`@Size(min = 12)`). A user can set `passwordpassword1234` or
+any other value present in public breach corpuses as long as it clears 12 characters.
+
+### Proposed fix
+Check new passwords against the k-anonymity range of the Have I Been Pwned Passwords API (or a
+bundled local breach-password list for an offline-friendly option) at register/reset/accept-invite
+time; reject with a clear message if found.
+
+### Why deferred
+Length + the rest of the reset/invite/verify hardening already shipped this pass covers the
+higher-priority gaps; this is an additional layer, not a missing core capability. Revisit alongside
+any broader password-policy work (rotation, complexity rules) if a customer's security review
+requires it.
+

@@ -7,8 +7,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
-import { Me, Organization, Member, Integration, Role } from '../../core/api/api.types';
+import { Me, Organization, Member, Integration, Role, SubscriptionResponse, SubscriptionRequestResponse, SubscriptionPlan } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
+import { subscriptionPlanLabel, subscriptionStatusLabel, subscriptionStatusBadgeVariant } from '@constants';
 import {
   UiPageHeaderComponent,
   UiCardComponent,
@@ -50,6 +51,28 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
       border-bottom: 1px solid var(--color-divider);
     }
     @media (max-width: 900px) { .invite-form { grid-template-columns: 1fr; } }
+    .billing-row { display: flex; gap: var(--space-6); align-items: center; flex-wrap: wrap; }
+    .billing-item .label { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .billing-item .value { font-weight: var(--weight-medium); margin-top: 2px; }
+    .canceled-note { color: var(--color-danger-text); font-size: var(--text-sm); margin-top: var(--space-4); }
+    .request-banner {
+      display: flex; align-items: flex-start; gap: var(--space-3);
+      margin-top: var(--space-5);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-info-soft); color: var(--color-info-text); border: 1px solid var(--color-info-border);
+      font-size: var(--text-sm);
+    }
+    .request-banner.rejected { background: var(--color-danger-soft); color: var(--color-danger-text); border-color: var(--color-danger-border); }
+    .request-banner.approved { background: var(--color-success-soft); color: var(--color-success-text); border-color: var(--color-success-border); }
+    .request-banner mat-icon { font-size: 18px; height: 18px; width: 18px; flex-shrink: 0; margin-top: 1px; }
+    .request-banner-title { font-weight: var(--weight-medium); }
+    .request-form {
+      display: flex; gap: var(--space-3); align-items: end; flex-wrap: wrap;
+      margin-top: var(--space-5);
+      padding-top: var(--space-5);
+      border-top: 1px solid var(--color-divider);
+    }
   `],
   template: `
     <div class="page">
@@ -69,6 +92,71 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
           </div>
         </ui-card>
 
+        <ui-card [title]="c.settings.billingTitle" [caption]="c.settings.billingCaption" style="display:block;margin-top:var(--space-4);" *ngIf="subscription() as sub">
+          <div class="billing-row">
+            <div class="billing-item">
+              <div class="label">{{ c.settings.billingPlanLabel }}</div>
+              <div class="value">{{ planLabel(sub.plan) }}</div>
+            </div>
+            <div class="billing-item">
+              <div class="label">{{ c.settings.billingStatusLabel }}</div>
+              <ui-badge [variant]="statusVariant(sub.status)">{{ statusLabel(sub.status) }}</ui-badge>
+            </div>
+            <div class="billing-item">
+              <div class="label">{{ c.settings.billingSeatsLabel }}</div>
+              <div class="value">{{ sub.seatLimit ?? c.settings.billingSeatsUnlimited }}</div>
+            </div>
+            <div class="billing-item">
+              <div class="label">{{ sub.status === 'TRIALING' ? c.settings.billingTrialEndsLabel : c.settings.billingRenewsLabel }}</div>
+              <div class="value">{{ (sub.status === 'TRIALING' ? sub.trialEndsAt : sub.currentPeriodEnd) ? ((sub.status === 'TRIALING' ? sub.trialEndsAt : sub.currentPeriodEnd) | date:'MMM d, y') : c.settings.billingNoExpiry }}</div>
+            </div>
+          </div>
+
+          <div class="request-banner" *ngIf="latestRequest() as reqst"
+               [class.rejected]="reqst.status === 'REJECTED'" [class.approved]="reqst.status === 'APPROVED'">
+            <mat-icon>{{ reqst.status === 'PENDING' ? 'hourglass_top' : reqst.status === 'REJECTED' ? 'block' : 'check_circle' }}</mat-icon>
+            <div style="flex:1;">
+              <div class="request-banner-title">
+                {{ reqst.status === 'PENDING' ? c.settings.billingRequestPendingTitle
+                   : reqst.status === 'APPROVED' ? c.settings.billingRequestApprovedTitle
+                   : c.settings.billingRequestRejectedTitle }}
+                &mdash; {{ planLabel(reqst.requestedPlan) }}, {{ reqst.requestedSeatLimit }} {{ c.settings.billingSeatsLabel | lowercase }}
+              </div>
+              <div *ngIf="reqst.status === 'REJECTED' && reqst.reviewNote">{{ reqst.reviewNote }}</div>
+            </div>
+            <ui-button *ngIf="reqst.status === 'PENDING' && canManage()" variant="ghost" [loading]="revoking()"
+                       [loadingText]="c.settings.billingRevokingButton" (click)="revoke(reqst.id)">
+              {{ c.settings.billingRevokeButton }}
+            </ui-button>
+          </div>
+
+          <form class="request-form" *ngIf="canManage() && sub.canRequestChange" (ngSubmit)="submitRequest()">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.billingRequestPlanLabel }}</mat-label>
+              <mat-select name="requestPlan" [(ngModel)]="requestPlan" [disabled]="hasPendingRequest()">
+                <mat-option value="TRIAL">{{ c.admin.PLAN_TRIAL }}</mat-option>
+                <mat-option value="STARTER">{{ c.admin.PLAN_STARTER }}</mat-option>
+                <mat-option value="PRO">{{ c.admin.PLAN_PRO }}</mat-option>
+                <mat-option value="ENTERPRISE">{{ c.admin.PLAN_ENTERPRISE }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="width:120px;" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.billingRequestSeatsLabel }}</mat-label>
+              <input matInput type="number" min="1" name="requestSeats" [(ngModel)]="requestSeats" [disabled]="hasPendingRequest()">
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="flex:1;min-width:220px;" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.billingRequestNoteLabel }}</mat-label>
+              <input matInput name="requestNote" [(ngModel)]="requestNote" [disabled]="hasPendingRequest()">
+            </mat-form-field>
+            <ui-button variant="primary" type="submit" [disabled]="hasPendingRequest() || !requestSeats"
+                       [loading]="submittingRequest()" [loadingText]="c.settings.billingRequestSubmittingButton">
+              {{ c.settings.billingRequestSubmitButton }}
+            </ui-button>
+          </form>
+
+          <div class="canceled-note" *ngIf="!sub.canRequestChange">{{ c.settings.billingCanceledMessage }}</div>
+        </ui-card>
+
         <ui-card [title]="c.settings.membersTitle" [caption]="c.settings.membersCaption" style="display:block;margin-top:var(--space-4);">
           <div class="invite-form">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -80,10 +168,6 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
               <input matInput type="email" [(ngModel)]="inviteEmail">
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>{{ c.settings.invitePasswordLabel }}</mat-label>
-              <input matInput type="password" [(ngModel)]="invitePassword">
-            </mat-form-field>
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ c.settings.inviteRoleLabel }}</mat-label>
               <mat-select [(ngModel)]="inviteRole">
                 <mat-option value="ADMIN">Admin</mat-option>
@@ -92,7 +176,7 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
               </mat-select>
             </mat-form-field>
             <ui-button variant="primary" [loading]="inviting()" [loadingText]="c.settings.invitingButton"
-                       [disabled]="!inviteEmail || !inviteName || invitePassword.length < 12"
+                       [disabled]="!inviteEmail || !inviteName"
                        (click)="invite()">
               {{ c.settings.inviteButton }}
             </ui-button>
@@ -157,13 +241,19 @@ export class SettingsComponent implements OnInit {
   org = signal<Organization | null>(null);
   members = signal<Member[]>([]);
   integrations = signal<Integration[]>([]);
+  subscription = signal<SubscriptionResponse | null>(null);
+  latestRequest = signal<SubscriptionRequestResponse | null>(null);
+  submittingRequest = signal(false);
+  revoking = signal(false);
+  requestPlan: SubscriptionPlan = 'PRO';
+  requestSeats: number | null = null;
+  requestNote = '';
 
   orgName = '';
   savingOrg = signal(false);
 
   inviteName = '';
   inviteEmail = '';
-  invitePassword = '';
   inviteRole: Role = 'REVIEWER';
   inviting = signal(false);
 
@@ -197,13 +287,12 @@ export class SettingsComponent implements OnInit {
   invite(): void {
     this.inviting.set(true);
     this.api.addMember({
-      email: this.inviteEmail, name: this.inviteName,
-      password: this.invitePassword, role: this.inviteRole,
+      email: this.inviteEmail, name: this.inviteName, role: this.inviteRole,
     }).subscribe({
       next: () => {
         this.msg.set(this.c.settings.memberAddedToast);
         this.err.set(null);
-        this.inviteName = ''; this.inviteEmail = ''; this.invitePassword = ''; this.inviteRole = 'REVIEWER';
+        this.inviteName = ''; this.inviteEmail = ''; this.inviteRole = 'REVIEWER';
         this.reloadMembers();
       },
       error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
@@ -225,8 +314,48 @@ export class SettingsComponent implements OnInit {
     });
   }
 
+  hasPendingRequest(): boolean {
+    return this.latestRequest()?.status === 'PENDING';
+  }
+
+  submitRequest(): void {
+    if (!this.requestSeats) return;
+    this.submittingRequest.set(true);
+    this.api.createSubscriptionRequest({
+      requestedPlan: this.requestPlan, requestedSeatLimit: this.requestSeats, note: this.requestNote.trim() || undefined,
+    }).subscribe({
+      next: (req) => {
+        this.latestRequest.set(req);
+        this.msg.set(this.c.settings.billingRequestSubmittedToast);
+        this.err.set(null);
+        this.requestNote = '';
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.submittingRequest.set(false),
+    });
+  }
+
+  planLabel(plan: string): string { return subscriptionPlanLabel(plan); }
+  statusLabel(status: string): string { return subscriptionStatusLabel(status); }
+  statusVariant(status: string) { return subscriptionStatusBadgeVariant(status); }
+
+  revoke(requestId: string): void {
+    this.revoking.set(true);
+    this.api.revokeSubscriptionRequest(requestId).subscribe({
+      next: () => {
+        this.latestRequest.set(null);
+        this.msg.set(this.c.settings.billingRequestRevokedToast);
+        this.err.set(null);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.revoking.set(false),
+    });
+  }
+
   private reload(): void {
     this.api.organization().subscribe(o => { this.org.set(o); this.orgName = o.name; });
+    this.api.subscription().subscribe(s => this.subscription.set(s));
+    this.api.subscriptionRequests().subscribe(reqs => this.latestRequest.set(reqs[0] ?? null));
     this.reloadMembers();
     this.reloadIntegrations();
   }

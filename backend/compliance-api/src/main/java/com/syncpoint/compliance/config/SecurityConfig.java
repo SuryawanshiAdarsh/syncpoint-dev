@@ -31,6 +31,10 @@ public class SecurityConfig {
             "/api/v1/auth/register",
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
+            "/api/v1/auth/forgot-password",
+            "/api/v1/auth/reset-password",
+            "/api/v1/auth/accept-invite",
+            "/api/v1/auth/verify-email",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
@@ -87,7 +91,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(corsAllowedOrigins);
+        // TEMPORARY (demo only): allow every origin so the demo is reachable from any host
+        // without pre-configuring an allow-list. MUST be reverted to `corsAllowedOrigins`
+        // (the configured allow-list) before any production/customer-facing deployment.
+        cfg.setAllowedOriginPatterns(List.of("*"));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

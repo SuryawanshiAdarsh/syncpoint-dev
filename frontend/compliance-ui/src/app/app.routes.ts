@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard, onboardingGuard } from './core/auth/auth.guard';
+import { authGuard, publicGuard, onboardingGuard, platformAdminGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -12,6 +12,22 @@ export const routes: Routes = [
     path: 'register',
     canActivate: [publicGuard],
     loadComponent: () => import('./features/register/register.component').then(m => m.RegisterComponent),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () => import('./features/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () => import('./features/reset-password/reset-password.component').then(m => m.ResetPasswordComponent),
+  },
+  {
+    path: 'accept-invite',
+    loadComponent: () => import('./features/accept-invite/accept-invite.component').then(m => m.AcceptInviteComponent),
+  },
+  {
+    path: 'verify-email',
+    loadComponent: () => import('./features/verify-email/verify-email.component').then(m => m.VerifyEmailComponent),
   },
   {
     path: '',
@@ -30,6 +46,16 @@ export const routes: Routes = [
       { path: 'audit-package', loadComponent: () => import('./features/export/export.component').then(m => m.ExportComponent) },
       { path: 'audit-log',     loadComponent: () => import('./features/audit-log/audit-log.component').then(m => m.AuditLogComponent) },
       { path: 'settings',      loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent) },
+      {
+        path: 'admin',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/admin-organizations.component').then(m => m.AdminOrganizationsComponent),
+      },
+      {
+        path: 'admin/:id',
+        canActivate: [platformAdminGuard],
+        loadComponent: () => import('./features/admin/admin-organization-detail.component').then(m => m.AdminOrganizationDetailComponent),
+      },
     ]
   },
   { path: '**', redirectTo: 'dashboard' },

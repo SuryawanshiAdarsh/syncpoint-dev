@@ -188,6 +188,14 @@ interface NavSection { title: string; items: NavItem[]; }
           </a>
         </ng-container>
 
+        <ng-container *ngIf="me()?.platformAdmin">
+          <div class="section-title">{{ c.shell.sidebarSectionPlatform }}</div>
+          <a class="link" routerLink="/admin" routerLinkActive="active">
+            <mat-icon>admin_panel_settings</mat-icon>
+            <span class="link-label">{{ c.shell.navAdminConsole }}</span>
+          </a>
+        </ng-container>
+
         <div class="footer">
           <div class="status-line"><span class="dot"></span> All systems operational</div>
           <div style="margin-top:4px;">v{{ appVersion }} · SOC 2 (DEMO)</div>

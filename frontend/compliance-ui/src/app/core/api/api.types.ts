@@ -15,6 +15,8 @@ export interface Me {
   organizationName: string;
   role: Role;
   onboardingCompleted: boolean;
+  emailVerified: boolean;
+  platformAdmin: boolean;
 }
 
 export type ControlStatus = 'COVERED' | 'PARTIAL' | 'MISSING' | 'NEEDS_REVIEW';
@@ -116,6 +118,98 @@ export interface AiAnalysisSummary {
   confidence?: number;
   reason?: string;
   createdAt: string;
+}
+
+// Platform admin console (internal Syncpoint-the-company view of its own tenants)
+export type SubscriptionPlan = 'TRIAL' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'SUSPENDED';
+
+export interface AdminOrganizationSummary {
+  organizationId: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  seatLimit?: number;
+  trialEndsAt?: string;
+  currentPeriodEnd?: string;
+  userCount: number;
+  evidenceCount: number;
+  integrationCount: number;
+  connectedIntegrationCount: number;
+  coveragePercent: number;
+}
+
+export interface AdminMemberSummary {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string;
+}
+
+export interface AdminOrganizationDetail {
+  summary: AdminOrganizationSummary;
+  members: AdminMemberSummary[];
+}
+
+export interface UpdateSubscriptionRequest {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  seatLimit?: number | null;
+  trialEndsAt?: string | null;
+  currentPeriodEnd?: string | null;
+}
+
+/** Tenant-facing view of the caller's own organization subscription (Settings > Billing). */
+export interface SubscriptionResponse {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  seatLimit?: number;
+  trialEndsAt?: string;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  canRequestChange: boolean;
+}
+
+export type SubscriptionRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
+
+export interface CreateSubscriptionRequestBody {
+  requestedPlan: SubscriptionPlan;
+  requestedSeatLimit: number;
+  note?: string;
+}
+
+/** Tenant-facing view of one of the org's own subscription requests. */
+export interface SubscriptionRequestResponse {
+  id: string;
+  requestedPlan: SubscriptionPlan;
+  requestedSeatLimit: number;
+  note?: string;
+  status: SubscriptionRequestStatus;
+  reviewNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
+/** Admin-facing view of a subscription request, enriched with org + requester identity. */
+export interface AdminSubscriptionRequestResponse {
+  id: string;
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  currentPlan?: SubscriptionPlan;
+  currentSeatLimit?: number;
+  requestedByName: string;
+  requestedByEmail: string;
+  requestedPlan: SubscriptionPlan;
+  requestedSeatLimit: number;
+  note?: string;
+  status: SubscriptionRequestStatus;
+  reviewNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
 }
 
 export interface Integration {

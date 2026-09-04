@@ -163,6 +163,11 @@ import { CAPTIONS } from '@captions';
       font-size: 13px;
       color: var(--color-text-secondary);
     }
+    .forgot-link {
+      text-align: right;
+      font-size: 12.5px;
+      margin: -4px 0 8px;
+    }
     .demo-hint {
       margin-top: 20px;
       padding: 12px 14px;
@@ -226,6 +231,7 @@ import { CAPTIONS } from '@captions';
               <mat-label>{{ c.auth.passwordLabel }}</mat-label>
               <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password">
             </mat-form-field>
+            <div class="forgot-link"><a routerLink="/forgot-password">{{ c.auth.forgotPasswordLink }}</a></div>
 
             <div class="actions">
               <button class="primary-btn" type="submit" [disabled]="loading()">

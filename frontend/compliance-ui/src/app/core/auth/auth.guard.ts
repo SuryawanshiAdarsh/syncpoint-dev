@@ -35,3 +35,17 @@ export const onboardingGuard: CanActivateFn = (_route, state) => {
     catchError(() => of(router.parseUrl('/login'))),
   );
 };
+
+/**
+ * Gates the internal Platform Admin Console (Syncpoint-the-company's own view of its tenants).
+ * This is a UX-level guard only — the backend independently enforces ROLE_PLATFORM_ADMIN on
+ * every /admin/** endpoint, so a denied redirect here never substitutes for server-side auth.
+ */
+export const platformAdminGuard: CanActivateFn = () => {
+  const api = inject(ApiService);
+  const router = inject(Router);
+  return api.me().pipe(
+    map(me => (me.platformAdmin ? true : router.parseUrl('/dashboard'))),
+    catchError(() => of(router.parseUrl('/login'))),
+  );
+};

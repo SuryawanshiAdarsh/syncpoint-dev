@@ -11,6 +11,8 @@ public record MeResponse(
         UUID organizationId,
         String organizationName,
         Role role,
-        boolean onboardingCompleted
+        boolean onboardingCompleted,
+        boolean emailVerified,
+        boolean platformAdmin
 ) {
 }

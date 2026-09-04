@@ -81,6 +81,15 @@ services:
         echo "bucket ready: $${S3_BUCKET}"
     restart: "no"
 
+  # Local dev SMTP catcher -- captures every email the backend sends (password reset,
+  # member invites, email verification) so nothing ever leaves the machine. Web UI at :8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: syncpoint-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+
   backend:
     build:
       context: ./backend/compliance-api
@@ -101,6 +110,9 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       AI_SERVICE_URL: http://ai-service:8000
       SECRET_STORE_MASTER_KEY: ${SECRET_STORE_MASTER_KEY:-}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      FRONTEND_URL: http://localhost:4200
     ports:
       - "8080:8080"
     healthcheck:

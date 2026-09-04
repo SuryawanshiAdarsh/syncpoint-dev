@@ -5,9 +5,9 @@ run the full 7-service stack in one command.
 
 ## Images (Docker Hub)
 
-- `adarshs1612/syncpoint-backend:0.1.0`
-- `adarshs1612/syncpoint-ai-service:0.1.0`
-- `adarshs1612/syncpoint-frontend:0.1.0`
+- `adarshs1612/syncpoint-backend:0.6.0`
+- `adarshs1612/syncpoint-ai-service:0.6.0`
+- `adarshs1612/syncpoint-frontend:0.6.0`
 
 Plus stock images pulled from Docker Hub: `postgres:16-alpine`, `redis:7-alpine`,
 `qdrant/qdrant:latest`, `minio/minio:latest`, `minio/mc:latest`.
@@ -78,15 +78,15 @@ The application does not put itself behind TLS — front it with a reverse proxy
 
 ## Version
 
-Images pushed 2026-09-01, git commit unknown (published from a working tree).
+Images pushed 2026-09-03 (0.6.0), git commit unknown (published from a working tree).
 Regenerate images with:
 
 ```bash
 docker compose build
-docker tag syncpoint-backend:latest    adarshs1612/syncpoint-backend:0.1.1
-docker tag syncpoint-ai-service:latest adarshs1612/syncpoint-ai-service:0.1.1
-docker tag syncpoint-frontend:latest   adarshs1612/syncpoint-frontend:0.1.1
-docker push adarshs1612/syncpoint-backend:0.1.1
-docker push adarshs1612/syncpoint-ai-service:0.1.1
-docker push adarshs1612/syncpoint-frontend:0.1.1
+docker tag syncpoint-backend:latest    adarshs1612/syncpoint-backend:0.6.1
+docker tag syncpoint-ai-service:latest adarshs1612/syncpoint-ai-service:0.6.1
+docker tag syncpoint-frontend:latest   adarshs1612/syncpoint-frontend:0.6.1
+docker push adarshs1612/syncpoint-backend:0.6.1
+docker push adarshs1612/syncpoint-ai-service:0.6.1
+docker push adarshs1612/syncpoint-frontend:0.6.1
 ```

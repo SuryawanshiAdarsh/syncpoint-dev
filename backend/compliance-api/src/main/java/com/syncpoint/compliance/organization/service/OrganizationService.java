@@ -2,12 +2,15 @@ package com.syncpoint.compliance.organization.service;
 
 import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.service.AuditService;
+import com.syncpoint.compliance.auth.entity.TokenPurpose;
 import com.syncpoint.compliance.auth.entity.User;
 import com.syncpoint.compliance.auth.repository.UserRepository;
+import com.syncpoint.compliance.auth.service.AuthTokenService;
 import com.syncpoint.compliance.common.exception.ConflictException;
 import com.syncpoint.compliance.common.exception.ForbiddenException;
 import com.syncpoint.compliance.common.exception.NotFoundException;
 import com.syncpoint.compliance.common.tenant.TenantContext;
+import com.syncpoint.compliance.notification.service.EmailService;
 import com.syncpoint.compliance.organization.dto.AddMemberRequest;
 import com.syncpoint.compliance.organization.dto.MemberResponse;
 import com.syncpoint.compliance.organization.dto.OrganizationResponse;
@@ -18,14 +21,17 @@ import com.syncpoint.compliance.organization.entity.OrganizationMember;
 import com.syncpoint.compliance.organization.entity.Role;
 import com.syncpoint.compliance.organization.repository.OrganizationMemberRepository;
 import com.syncpoint.compliance.organization.repository.OrganizationRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,17 +43,26 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
+    private final AuthTokenService authTokenService;
+    private final EmailService emailService;
+    private final String frontendUrl;
 
     public OrganizationService(OrganizationRepository organizationRepository,
                                OrganizationMemberRepository memberRepository,
                                UserRepository userRepository,
                                PasswordEncoder passwordEncoder,
-                               AuditService auditService) {
+                               AuditService auditService,
+                               AuthTokenService authTokenService,
+                               EmailService emailService,
+                               @Value("${syncpoint.frontend-url:http://localhost:4200}") String frontendUrl) {
         this.organizationRepository = organizationRepository;
         this.memberRepository = memberRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
+        this.authTokenService = authTokenService;
+        this.emailService = emailService;
+        this.frontendUrl = frontendUrl;
     }
 
     @Transactional(readOnly = true)
@@ -103,15 +118,25 @@ public class OrganizationService {
         UUID orgId = TenantContext.require().organizationId();
         String email = req.email().toLowerCase(Locale.ROOT).trim();
 
-        User user = userRepository.findByEmailIgnoreCase(email).orElseGet(() -> userRepository.save(
-                new User(email, passwordEncoder.encode(req.password()), req.name().trim())));
+        Optional<User> existing = userRepository.findByEmailIgnoreCase(email);
+        boolean isNewUser = existing.isEmpty();
+        User user = existing.orElseGet(() -> userRepository.save(
+                // Unusable placeholder password — the invited member sets their own via the emailed link,
+                // so nobody at the inviting org ever knows another employee's real password.
+                new User(email, passwordEncoder.encode(UUID.randomUUID().toString()), req.name().trim())));
 
         if (memberRepository.existsByOrganizationIdAndUserId(orgId, user.getId())) {
             throw new ConflictException("User is already a member of the organization");
         }
         OrganizationMember membership = memberRepository.save(new OrganizationMember(orgId, user.getId(), req.role()));
 
-        auditService.record(orgId, TenantContext.require().userId(), AuditEvents.USER_CREATED, "organization_member", membership.getId());
+        auditService.record(orgId, TenantContext.require().userId(), AuditEvents.MEMBER_INVITED, "organization_member", membership.getId());
+
+        if (isNewUser) {
+            Organization org = getCurrentOrganization();
+            String token = authTokenService.issue(user.getId(), TokenPurpose.INVITE, Duration.ofDays(7));
+            emailService.sendInviteEmail(user.getEmail(), org.getName(), frontendUrl + "/accept-invite?token=" + token);
+        }
 
         return new MemberResponse(membership.getId(), user.getId(), user.getEmail(), user.getName(),
                 membership.getRole(), membership.getCreatedAt());

@@ -6,6 +6,10 @@ import com.syncpoint.compliance.organization.dto.OrganizationResponse;
 import com.syncpoint.compliance.organization.dto.UpdateMemberRoleRequest;
 import com.syncpoint.compliance.organization.dto.UpdateOrganizationRequest;
 import com.syncpoint.compliance.organization.service.OrganizationService;
+import com.syncpoint.compliance.platform.dto.CreateSubscriptionRequestRequest;
+import com.syncpoint.compliance.platform.dto.SubscriptionRequestResponse;
+import com.syncpoint.compliance.platform.dto.SubscriptionResponse;
+import com.syncpoint.compliance.platform.service.SubscriptionService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +30,11 @@ import java.util.UUID;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final SubscriptionService subscriptionService;
 
-    public OrganizationController(OrganizationService organizationService) {
+    public OrganizationController(OrganizationService organizationService, SubscriptionService subscriptionService) {
         this.organizationService = organizationService;
+        this.subscriptionService = subscriptionService;
     }
 
     @GetMapping
@@ -63,5 +69,29 @@ public class OrganizationController {
     public ResponseEntity<MemberResponse> updateMemberRole(@PathVariable UUID id,
                                                            @Valid @RequestBody UpdateMemberRoleRequest req) {
         return ResponseEntity.ok(organizationService.updateMemberRole(id, req));
+    }
+
+    @GetMapping("/subscription")
+    public ResponseEntity<SubscriptionResponse> subscription() {
+        return ResponseEntity.ok(subscriptionService.current());
+    }
+
+    @GetMapping("/subscription/requests")
+    public ResponseEntity<List<SubscriptionRequestResponse>> subscriptionRequests() {
+        return ResponseEntity.ok(subscriptionService.listRequests());
+    }
+
+    @PostMapping("/subscription/requests")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<SubscriptionRequestResponse> requestSubscriptionChange(
+            @Valid @RequestBody CreateSubscriptionRequestRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(subscriptionService.requestChange(req));
+    }
+
+    @PostMapping("/subscription/requests/{id}/revoke")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<Void> revokeSubscriptionRequest(@PathVariable UUID id) {
+        subscriptionService.revokeRequest(id);
+        return ResponseEntity.noContent().build();
     }
 }

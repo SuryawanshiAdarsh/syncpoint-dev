@@ -1,16 +1,18 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, formatDate } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
-import { ControlGap, CoverageTrendPoint, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
+import { ControlGap, ControlStatus, CoverageTrendPoint, DashboardSummary, Evidence, Me } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
 import {
   controlStatusClass as _controlStatusClass,
+  controlStatusMeta,
   evidenceSourceIcon as _sourceIcon,
   evidenceSourceLabel as _sourceLabel,
   freshnessClass as _freshnessClass,
+  statusColorVar,
 } from '@constants';
 
 @Component({
@@ -129,6 +131,24 @@ import {
     /* Coverage trend */
     .trend-card { margin-bottom: var(--space-4); }
     .trend-chart { width: 100%; height: 160px; display: block; }
+    .trend-gridline { stroke: var(--color-divider); stroke-width: 1; }
+    .trend-gridlabel { font-size: 9px; fill: var(--color-text-muted); }
+    .trend-band { stroke: var(--color-surface); stroke-width: 1; fill-opacity: 0.85; }
+    .trend-x-axis {
+      display: flex; justify-content: space-between;
+      padding: 4px var(--space-6) 0 calc(var(--space-6) + 6.25%);
+      font-size: 11px; color: var(--color-text-muted);
+    }
+    .trend-summary { padding: 0 var(--space-6) 4px; font-size: 12.5px; color: var(--color-text-secondary); font-weight: 500; }
+    .trend-legend {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      padding: 14px var(--space-6) var(--space-5);
+      border-top: 1px solid var(--color-divider);
+      margin-top: 12px;
+    }
+    .trend-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-text-secondary); }
+    .trend-legend-item .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .trend-legend-item strong { color: var(--color-text); font-weight: 600; }
     .trend-empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 6px; padding: 32px 16px; text-align: center;
@@ -212,16 +232,28 @@ import {
           <h2>{{ c.dashboard.trendTitle }}</h2>
         </div>
         <p class="muted small" style="padding:0 var(--space-6) 12px;">{{ c.dashboard.trendCaption }}</p>
-        <svg *ngIf="trend().length >= 2; else trendEmpty" class="trend-chart" viewBox="0 0 600 160" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.28"/>
-              <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <path [attr.d]="trendAreaPath()" fill="url(#trendFill)" stroke="none"/>
-          <path [attr.d]="trendLinePath()" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+
+        <ng-container *ngIf="trend().length >= 2; else trendEmpty">
+          <p class="trend-summary">{{ trendSummaryText() }}</p>
+          <svg class="trend-chart" viewBox="0 0 640 160" preserveAspectRatio="none">
+            <line *ngFor="let pct of trendGridPercents" class="trend-gridline"
+                  x1="40" [attr.y1]="trendYFor(pct)" x2="640" [attr.y2]="trendYFor(pct)"/>
+            <text *ngFor="let pct of trendGridPercents" class="trend-gridlabel"
+                  x="34" text-anchor="end" dominant-baseline="middle" [attr.y]="trendYFor(pct)">{{ pct }}%</text>
+            <path *ngFor="let band of trendBands()" class="trend-band"
+                  [attr.d]="band.path" [attr.fill]="band.color"/>
+          </svg>
+          <div class="trend-x-axis">
+            <span *ngFor="let l of trendXAxisLabels()">{{ l }}</span>
+          </div>
+          <div class="trend-legend">
+            <div class="trend-legend-item" *ngFor="let item of trendLegend()">
+              <span class="dot" [style.background]="item.color"></span>
+              {{ item.label }} <strong>{{ item.count }}</strong>
+            </div>
+          </div>
+        </ng-container>
+
         <ng-template #trendEmpty>
           <div class="trend-empty">
             <mat-icon>show_chart</mat-icon>
@@ -334,28 +366,85 @@ export class DashboardComponent implements OnInit {
   sourceIcon(s: string): string { return _sourceIcon(s); }
   sourceLabel(s: string): string { return _sourceLabel(s); }
 
-  // Trend chart math: viewBox is 600x160; x spreads points evenly, y maps 0-100% to bottom-top.
-  private trendCoords(): { x: number; y: number }[] {
+  // ─── Coverage trend: stacked-by-status area chart ──────────────────
+  // viewBox is 600x160. Stack order is bottom-to-top so "good" grows up from
+  // the baseline and "bad" shrinks from the top — same status order as the
+  // hero legend above. Each day is normalized to 100% of that day's total so
+  // the chart stays readable even if the control count changes over time.
+  private readonly trendStackOrder: readonly ControlStatus[] = ['COVERED', 'PARTIAL', 'NEEDS_REVIEW', 'MISSING'];
+  readonly trendGridPercents = [0, 25, 50, 75, 100];
+
+  private trendCountFor(point: CoverageTrendPoint, status: ControlStatus): number {
+    return ({
+      COVERED: point.covered, PARTIAL: point.partial,
+      NEEDS_REVIEW: point.needsReview, MISSING: point.missing,
+    } as Record<ControlStatus, number>)[status];
+  }
+
+  private trendXFor(index: number, count: number): number {
+    const plotLeft = 40, plotWidth = 600;
+    return count === 1 ? plotLeft + plotWidth / 2 : plotLeft + (index / (count - 1)) * plotWidth;
+  }
+
+  trendYFor(percent: number): number {
+    const h = 160, pad = 10;
+    return pad + (1 - percent / 100) * (h - pad * 2);
+  }
+
+  trendBands(): { status: ControlStatus; color: string; path: string }[] {
     const points = this.trend();
-    const w = 600, h = 160, pad = 6;
-    return points.map((p, i) => ({
-      x: points.length === 1 ? w / 2 : (i / (points.length - 1)) * w,
-      y: pad + (1 - p.coveragePercent / 100) * (h - pad * 2),
+    const n = points.length;
+    if (n < 2) return [];
+
+    // Cumulative percent-of-day-total per status, bottom-to-top.
+    const cumulative = points.map(p => {
+      const total = p.covered + p.partial + p.needsReview + p.missing || 1;
+      let running = 0;
+      return this.trendStackOrder.map(status => {
+        running += (this.trendCountFor(p, status) / total) * 100;
+        return running;
+      });
+    });
+
+    const xs = points.map((_, i) => this.trendXFor(i, n));
+    return this.trendStackOrder.map((status, bandIndex) => {
+      const topPoints = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${this.trendYFor(cumulative[i][bandIndex]).toFixed(1)}`);
+      const bottomPoints = xs
+        .map((x, i) => `L${x.toFixed(1)},${this.trendYFor(bandIndex === 0 ? 0 : cumulative[i][bandIndex - 1]).toFixed(1)}`)
+        .reverse();
+      return {
+        status,
+        color: statusColorVar(controlStatusMeta(status)),
+        path: `${topPoints.join(' ')} ${bottomPoints.join(' ')} Z`,
+      };
+    });
+  }
+
+  trendXAxisLabels(): string[] {
+    const points = this.trend();
+    const n = points.length;
+    if (n < 2) return [];
+    const indices = n === 2 ? [0, n - 1] : [0, Math.floor((n - 1) / 2), n - 1];
+    return indices.map((i, k) =>
+      k === indices.length - 1 ? this.c.dashboard.trendToday : formatDate(points[i].date, 'MMM d', 'en-US'));
+  }
+
+  trendLegend(): { status: ControlStatus; label: string; color: string; count: number }[] {
+    const points = this.trend();
+    if (!points.length) return [];
+    const latest = points[points.length - 1];
+    return this.trendStackOrder.map(status => ({
+      status,
+      label: (this.c.status as Record<string, string>)[status] ?? status,
+      color: statusColorVar(controlStatusMeta(status)),
+      count: this.trendCountFor(latest, status),
     }));
   }
 
-  trendLinePath(): string {
-    const coords = this.trendCoords();
-    if (!coords.length) return '';
-    return coords.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-  }
-
-  trendAreaPath(): string {
-    const coords = this.trendCoords();
-    if (!coords.length) return '';
-    const line = this.trendLinePath();
-    const last = coords[coords.length - 1];
-    const first = coords[0];
-    return `${line} L${last.x.toFixed(1)},160 L${first.x.toFixed(1)},160 Z`;
+  trendSummaryText(): string {
+    const points = this.trend();
+    if (points.length < 2) return '';
+    const first = points[0], last = points[points.length - 1];
+    return this.c.dashboard.trendSummary(first.coveragePercent, last.coveragePercent, points.length);
   }
 }

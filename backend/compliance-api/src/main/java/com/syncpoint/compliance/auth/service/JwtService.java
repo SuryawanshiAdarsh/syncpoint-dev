@@ -31,12 +31,12 @@ public class JwtService {
         this.signingKey = Keys.hmacShaKeyFor(secret);
     }
 
-    public String createAccessToken(UUID userId, String email, UUID organizationId, Role role) {
-        return build(userId, email, organizationId, role, TYPE_ACCESS, properties.accessTokenExpiration().toSeconds());
+    public String createAccessToken(UUID userId, String email, UUID organizationId, Role role, boolean platformAdmin) {
+        return build(userId, email, organizationId, role, platformAdmin, TYPE_ACCESS, properties.accessTokenExpiration().toSeconds());
     }
 
-    public String createRefreshToken(UUID userId, String email, UUID organizationId, Role role) {
-        return build(userId, email, organizationId, role, TYPE_REFRESH, properties.refreshTokenExpiration().toSeconds());
+    public String createRefreshToken(UUID userId, String email, UUID organizationId, Role role, boolean platformAdmin) {
+        return build(userId, email, organizationId, role, platformAdmin, TYPE_REFRESH, properties.refreshTokenExpiration().toSeconds());
     }
 
     public long accessTokenExpiresInSeconds() {
@@ -68,7 +68,7 @@ public class JwtService {
                 .getPayload();
     }
 
-    private String build(UUID userId, String email, UUID organizationId, Role role, String type, long expiresInSeconds) {
+    private String build(UUID userId, String email, UUID organizationId, Role role, boolean platformAdmin, String type, long expiresInSeconds) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userId.toString())
@@ -78,6 +78,7 @@ public class JwtService {
                 .claim("email", email)
                 .claim("orgId", organizationId.toString())
                 .claim("role", role.name())
+                .claim("platformAdmin", platformAdmin)
                 .claim("typ", type)
                 .signWith(signingKey, Jwts.SIG.HS256)
                 .compact();

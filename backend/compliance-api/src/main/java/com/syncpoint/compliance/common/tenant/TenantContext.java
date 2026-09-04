@@ -8,7 +8,7 @@ import java.util.UUID;
 /** Per-request holder for the authenticated user's tenant context. */
 public final class TenantContext {
 
-    public record Principal(UUID userId, UUID organizationId, Role role, String email) {
+    public record Principal(UUID userId, UUID organizationId, Role role, String email, boolean platformAdmin) {
     }
 
     private static final ThreadLocal<Principal> HOLDER = new ThreadLocal<>();

@@ -28,6 +28,12 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
+    @Column(name = "platform_admin", nullable = false)
+    private boolean platformAdmin;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -63,6 +69,9 @@ public class User {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public boolean isEmailVerified() { return emailVerifiedAt != null; }
+    public void markEmailVerified() { this.emailVerifiedAt = Instant.now(); }
+    public boolean isPlatformAdmin() { return platformAdmin; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 

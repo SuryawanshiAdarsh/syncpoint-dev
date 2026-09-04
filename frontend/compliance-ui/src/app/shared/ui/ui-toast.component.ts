@@ -3,7 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
 /**
- * Inline banner for success / error / info notifications.
+ * Floating success / error / info notification, fixed to the bottom-right of the
+ * viewport so it's always visible regardless of scroll position or how far down
+ * the page it's declared (previously rendered inline, which put it below the fold
+ * on any page with more than a screenful of content above it).
  *
  * Usage:
  *   <ui-toast variant="success">Evidence uploaded</ui-toast>
@@ -14,19 +17,28 @@ import { MatIconModule } from '@angular/material/icon';
   selector: 'ui-toast',
   imports: [CommonModule, MatIconModule],
   styles: [`
-    :host { display: block; }
+    :host {
+      display: block;
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 1000;
+      max-width: min(420px, calc(100vw - 48px));
+      pointer-events: none;
+    }
     .toast {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 16px;
       border-radius: var(--radius-md);
       font-size: var(--text-md);
       line-height: 1.5;
-      margin-top: 12px;
       border: 1px solid transparent;
+      box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.18));
+      pointer-events: auto;
       animation: slide-in 200ms var(--ease-out);
     }
     @keyframes slide-in {
-      from { opacity: 0; transform: translateY(4px); }
+      from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: none; }
     }
     .toast mat-icon { font-size: 18px; height: 18px; width: 18px; flex-shrink: 0; }
