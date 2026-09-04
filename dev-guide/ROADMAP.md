@@ -17,28 +17,42 @@
 | [../PRODUCT.md](../PRODUCT.md) | Product explainer for non-technical readers |
 | [../PROJECT_SPEC3.md](../PROJECT_SPEC3.md) | MVP completion source of truth |
 
-## 2. Where we are today (2026-09-02)
+## 2. Where we are today (2026-09-04)
+
+> **Note on sequencing**: M1 (onboarding gate) and M8 (scheduled collection) were pulled
+> forward and shipped out of order relative to §3's dependency chain, and a large amount of
+> scope was added that isn't in [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md) at all —
+> a Platform Admin Console and a subscription request/approve/reject/revoke workflow. M2–M7,
+> M9, M10 remain exactly as specified there. See that file's §1 gap matrix for current status.
 
 ### 2.1 What's proven end-to-end
 
 Everything in this list has been demonstrated locally in the current codebase:
 
 - ✅ **Docker compose stack** — 7 services boot healthy in < 30 s
-- ✅ **All-in-one appliance** — 1.45 GB single container, boots in ~20 s, 654 MB steady-state memory
+- ✅ **All-in-one appliance** — 1.45 GB single container, boots in ~20 s, 654 MB steady-state memory (not rebuilt since 0.5.1 — likely stale)
 - ✅ **Signup, login, JWT** — access + refresh tokens with 15-min / 7-day lifetimes
 - ✅ **Multi-tenant isolation** — every tenant-owned query filters by `organizationId`
 - ✅ **Role-based access** — OWNER / ADMIN / REVIEWER enforced via `@PreAuthorize`
-- ✅ **Evidence upload** — hashed (SHA-256), versioned, stored in MinIO with tenant-scoped keys
-- ✅ **AI-assisted mapping** — stub LLM proposes classification + confidence; human reviews
-- ✅ **Dashboard with real data** — coverage %, gaps, recent evidence, integration health
+- ✅ **Evidence upload + versioning** — hashed (SHA-256), versioned (`POST /evidence/{id}/versions`), stored in MinIO with tenant-scoped keys
+- ✅ **AI-assisted mapping** — stub LLM proposes classification + confidence; human reviews via Confirm/Reject on control-detail
+- ✅ **Dashboard with real data** — coverage %, gaps, recent evidence, integration health, coverage-trend chart
 - ✅ **Audit-package export** — ZIP with README, index, per-control folders, audit log
+- ✅ **Audit Log Viewer** — dedicated `/audit-log` page over `GET /audit-events`
+- ✅ **Activity dashboard** — collection-run history, KPIs, per-run log trail
 - ✅ **RAG query** — Qdrant retrieval + LLM synthesis with citations
 - ✅ **GitHub PAT collector** — real GitHub API, real branch protection evidence
+- ✅ **Onboarding gate (M1)** — persisted `onboarding_completed` flag + route guard, existing orgs backfilled
+- ✅ **Scheduled collection (M8)** — tenant-free sweep job, configurable cron, overlap-guarded, schedule picker in Settings
+- ✅ **Organization Settings page** — General / Members / Automation, role-gated
+- ✅ **Password reset, email verification, invite-by-email** — `auth_tokens` table, local Mailpit catcher
+- ✅ **Platform Admin Console** (added, not in original spec) — cross-tenant org list/detail, KPIs, `ROLE_PLATFORM_ADMIN`
+- ✅ **Subscription request/approve/reject/revoke workflow** (added, not in original spec) — tenant request form + admin review queue
 - ✅ **Cross-service request-ID correlation** — one ID flows backend → AI service in logs
 - ✅ **Structured errors** — same `{timestamp, status, code, message, path}` shape from both services
 - ✅ **Envelope-encrypted secret store** — AES-256-GCM with a master key
-- ✅ **Demo seed** — `demo-owner@syncpoint.local` / `demo-password-2026` produces a realistic dashboard
-- ✅ **Published to Docker Hub** — `syncpoint-{backend,ai-service,frontend}:0.5.0` live
+- ✅ **Demo seed** — `demo-owner@syncpoint.local` / `demo-password-2026` produces a fully populated, realistic dashboard (60 evidence, 15+ orgs, ~220 audit events)
+- ✅ **Published to Docker Hub** — `syncpoint-{backend,ai-service,frontend}:0.7.0` live, verified byte-identical in an isolated pull-only simulation
 
 ### 2.2 What's delivered in code but not yet proven with real inputs
 
@@ -46,25 +60,25 @@ Everything in this list has been demonstrated locally in the current codebase:
 - 🟡 **OpenAI embedding provider** — abstraction exists; real implementation not wired
 - 🟡 **Full RAG ingestion** — demo corpus ingests on startup; no `/rag/ingest` endpoint for real docs
 - 🟡 **RAG injected into evidence analysis** — retrieval endpoint works; `/map-evidence` doesn't yet call it
-- 🟡 **Onboarding gate** — UI exists; no `onboarding_completed` flag on the org
 
 ### 2.3 What's absent
 
 - 🔴 **GitHub OAuth** (PAT-only today)
 - 🔴 **AWS collector** (unavailable in the provider catalog)
 - 🔴 **Jira collector** (unavailable)
-- 🔴 **Scheduled collection** (schedule enum exists; no cron job scans it)
 - 🔴 **Malware scanning** (`MalwareScanner` interface not built)
-- 🔴 **Password reset & email verification**
+- 🔴 **Refresh-token revocation** (BUG-009 — reset-password doesn't revoke existing sessions either)
+- 🔴 **Breached-password check** (BUG-010)
 - 🔴 **AI cost tracking + budget guardrails**
 - 🔴 **Automated tests in CI** (backend has some ITs; AI service has none; frontend has none)
 - 🔴 **Public deployment** (only local Docker)
+- 🔴 **Payment processor** (subscription workflow is manual platform-admin review, no Stripe/billing integration)
 - 🔴 **Business, legal, ops layers** — see PATH-TO-FIRST-CUSTOMER.md
 
 ### 2.4 Numeric summary
 
 ```
-Technical MVP:          █████████░░░░░░  70 %
+Technical MVP:          ███████████░░░░  75 %
 Commercial MVP:         ██░░░░░░░░░░░░░  15 %
 Trust / posture:        ░░░░░░░░░░░░░░░   0 %
 Docs completeness:      ██████████░░░░░  75 %
@@ -96,6 +110,10 @@ Phase A  →  A.5  →  Phase B  →  Phase C  →  Phase D  →  Phase E
 
 ### Phase A.5 — Core flows wiring (1 week, between A and B)
 
+**Status: ✅ Done (2026-09-03).** Onboarding gate (M1), dashboard live-refresh, evidence
+upload/map/analyze/approve toast+refresh, and control-detail Confirm/Reject all shipped and
+verified per the plan below.
+
 **Goal**: make the four core end-to-end flows (onboarding, dashboard, evidence mapping, control detail) *actually* work — click → thing happens → user sees the result.
 
 Detailed in [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md). Summary:
@@ -112,6 +130,12 @@ Detailed in [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md). Summary:
 ### Phase B — MVP completion (weeks 2–8)
 
 **Goal**: deliver everything in [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md).
+
+**Status**: M1 (onboarding gate) and M8 (scheduled collection) are done, pulled forward out of
+order. M2–M7, M9, M10 are not started. A large amount of unplanned scope also shipped in this
+phase window — Platform Admin Console, subscription request/approve/reject/revoke workflow,
+password reset/email verification/invite, evidence versioning, audit log viewer, coverage trend.
+None of these substitute for M2–M7 — they don't touch AI quality or new integrations.
 
 Ordered dependency chain:
 
@@ -143,6 +167,11 @@ M10 Security + AI/RAG eval + E2E + pilot readiness
 
 **Docker Hub tag plan** (already in MVP-COMPLETION-PLAN.md §5):
 
+> **Actual tags diverged from this plan** — `0.6.0` shipped Core Flows Wiring (not M1 alone) and
+> `0.7.0` shipped the Platform Admin Console + subscription workflow + M8 (not M2). M2 has not
+> shipped yet. Treat the table below as the *original* forward plan for M2–M10; the next real
+> tag continues from `0.7.0` whenever M2 lands, not from a reset.
+
 | Milestone | Tag |
 |---|---|
 | M1 | 0.6.0 |
@@ -156,7 +185,7 @@ M10 Security + AI/RAG eval + E2E + pilot readiness
 | M9 | 0.14.0 |
 | M10 | 1.0.0-rc1 |
 
-**Skippable-for-first-customer**: M8 (scheduled collection), M9 (Jira). Both can be done post-first-customer.
+**Skippable-for-first-customer**: ~~M8 (scheduled collection)~~ already shipped; M9 (Jira) can still be done post-first-customer.
 
 **Cannot skip**: M1, M2, M5, M6, M7. These are absolute blockers per PATH-TO-FIRST-CUSTOMER.md §3.
 

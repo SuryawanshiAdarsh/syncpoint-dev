@@ -1,29 +1,37 @@
-# Syncpoint Compliance — Docker Hub Deploy
+# Syncpoint Compliance — Deploy from source
 
-Prebuilt images are published on Docker Hub. Anyone with Docker installed can
-run the full 7-service stack in one command.
+> **Docker Hub images have been taken down** (the `adarshs1612/syncpoint-*` repos
+> were public and are no longer published). This repo's source is now the only
+> way to run Syncpoint — `docker-compose.hub.yml` builds all three application
+> images locally instead of pulling them.
 
-## Images (Docker Hub)
+Anyone with Docker installed and a clone of this repository can build and run
+the full 7-service stack in one command.
 
-- `adarshs1612/syncpoint-backend:0.7.0`
-- `adarshs1612/syncpoint-ai-service:0.7.0`
-- `adarshs1612/syncpoint-frontend:0.7.0`
+## Images (built locally, not pulled)
 
-Plus stock images pulled from Docker Hub: `postgres:16-alpine`, `redis:7-alpine`,
+- `syncpoint-backend` — built from `backend/compliance-api`
+- `syncpoint-ai-service` — built from `ai-service`
+- `syncpoint-frontend` — built from `frontend/compliance-ui`
+
+Plus stock images pulled from Docker Hub (these are third-party base images,
+not Syncpoint's own): `postgres:16-alpine`, `redis:7-alpine`,
 `qdrant/qdrant:latest`, `minio/minio:latest`, `minio/mc:latest`, `axllent/mailpit:latest`.
 
 ## Quickstart (recipient side)
 
-Only requires **Docker Desktop 24+** or **Docker Engine 24+** with Compose v2.
+Only requires **Docker Desktop 24+** or **Docker Engine 24+** with Compose v2,
+plus a clone of this repository (the build needs the source, not just the
+compose file).
 
 ```bash
-# 1. Grab the compose + env files
-curl -O https://raw.githubusercontent.com/<you>/syncpoint/main/deploy/docker-compose.hub.yml
-curl -O https://raw.githubusercontent.com/<you>/syncpoint/main/deploy/.env.example
+# 1. Clone and configure
+git clone https://github.com/SuryawanshiAdarsh/syncpoint-dev.git
+cd syncpoint-dev/deploy
 cp .env.example .env
 
-# 2. Start everything
-docker compose -f docker-compose.hub.yml up -d
+# 2. Build and start everything (first build takes a few minutes)
+docker compose -f docker-compose.hub.yml up -d --build
 
 # 3. Wait ~30s for backend healthcheck to go green
 docker compose -f docker-compose.hub.yml ps
@@ -31,11 +39,6 @@ docker compose -f docker-compose.hub.yml ps
 # 4. Open the UI
 open http://localhost:4200
 ```
-
-Or, if you don't have this repo published anywhere yet, just share
-`docker-compose.hub.yml` + `.env.example` directly. Nothing else is needed —
-the images already have the frontend, backend, migrations, and AI service
-baked in.
 
 ## Ports the recipient will use
 
@@ -119,15 +122,15 @@ The application does not put itself behind TLS — front it with a reverse proxy
 
 ## Version
 
-Images pushed 2026-09-04 (0.7.0), git commit unknown (published from a working tree).
-Regenerate images with:
+As of 2026-09-04, this repository no longer publishes prebuilt images to
+Docker Hub. Build and run locally:
 
 ```bash
-docker compose build
-docker tag syncpoint-backend:latest    adarshs1612/syncpoint-backend:0.7.1
-docker tag syncpoint-ai-service:latest adarshs1612/syncpoint-ai-service:0.7.1
-docker tag syncpoint-frontend:latest   adarshs1612/syncpoint-frontend:0.7.1
-docker push adarshs1612/syncpoint-backend:0.7.1
-docker push adarshs1612/syncpoint-ai-service:0.7.1
-docker push adarshs1612/syncpoint-frontend:0.7.1
+docker compose -f deploy/docker-compose.hub.yml up -d --build
+```
+
+To pick up new source changes, rebuild and restart:
+
+```bash
+docker compose -f deploy/docker-compose.hub.yml up -d --build
 ```

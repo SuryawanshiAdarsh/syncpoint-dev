@@ -1,9 +1,14 @@
 name: syncpoint
 
-# Deployable Compose file that pulls prebuilt images from Docker Hub.
+# Deployable Compose file. Builds all three application images from source --
+# no images are pulled from Docker Hub (the syncpoint-* repos there have been
+# taken down; this repo's source is the only distribution channel now).
 # Usage:
 #   cp .env.example .env
-#   docker compose -f docker-compose.hub.yml up -d
+#   docker compose -f deploy/docker-compose.hub.yml up -d --build
+#
+# Run from the repository root so the ./backend, ./ai-service, ./frontend
+# build contexts below resolve correctly.
 #
 # Requires: Docker Engine 24+ / Docker Desktop.
 
@@ -83,7 +88,8 @@ services:
       - "8025:8025"
 
   backend:
-    image: adarshs1612/syncpoint-backend:0.7.0
+    build:
+      context: ../backend/compliance-api
     container_name: syncpoint-backend
     restart: unless-stopped
     depends_on:
@@ -113,7 +119,8 @@ services:
       start_period: 45s
 
   ai-service:
-    image: adarshs1612/syncpoint-ai-service:0.7.0
+    build:
+      context: ../ai-service
     container_name: syncpoint-ai
     restart: unless-stopped
     depends_on: [qdrant]
@@ -125,7 +132,8 @@ services:
       QDRANT_URL: http://qdrant:6333
 
   frontend:
-    image: adarshs1612/syncpoint-frontend:0.7.0
+    build:
+      context: ../frontend/compliance-ui
     container_name: syncpoint-frontend
     restart: unless-stopped
     depends_on: [backend]

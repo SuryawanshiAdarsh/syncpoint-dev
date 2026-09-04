@@ -8,22 +8,36 @@
 
 ## 0. Snapshot of what is already done
 
+> Updated 2026-09-04. Also shipped since the table below was first written: **M1 (onboarding
+> gate)**, **M8 (scheduled collection)** — both pulled forward out of order, see §1 — plus a
+> Platform Admin Console and subscription request/approve/reject/revoke workflow, password
+> reset/email verification/invite-by-email, evidence versioning, an audit log viewer, and
+> coverage-trend snapshots. None of these are in the original M1–M10 scope except M1/M8.
+
 | Area | State |
 |---|---|
 | Docker Compose (7 services) | ✅ Complete — postgres, redis, qdrant, minio, backend, ai-service, frontend all healthy |
 | Auth + JWT + rate limit | ✅ Complete |
-| Multi-tenant orgs + RBAC + audit events (15 types) | ✅ Complete |
+| Password reset + email verification + invite-by-email | ✅ Complete (`auth_tokens` table, V18, local Mailpit) |
+| Multi-tenant orgs + RBAC + audit events (15+ types) | ✅ Complete |
+| Onboarding gate (persisted flag + route guard) | ✅ Complete — this is **M1**, see §3 |
 | Evidence upload + MinIO + SHA-256 + versioning + freshness | ✅ Complete |
-| SOC 2 controls + demo seed (15 controls) | ✅ Complete |
-| Evidence → control mapping + human review | ✅ Complete |
+| SOC 2 controls + demo seed (15 controls, 60 evidence) | ✅ Complete |
+| Evidence → control mapping + human review (Confirm/Reject) | ✅ Complete |
 | Audit package export (ZIP with README/index/controls/audit-log) | ✅ Complete |
+| Audit log viewer + activity dashboard | ✅ Complete |
+| Coverage-trend snapshots + chart | ✅ Complete |
+| Scheduled collection (DAILY/WEEKLY sweep) | ✅ Complete — this is **M8**, see §3 |
+| Organization Settings page (General/Members/Automation) | ✅ Complete |
+| Platform Admin Console (cross-tenant) | ✅ Complete — **not in original spec** |
+| Subscription request/approve/reject/revoke workflow | ✅ Complete — **not in original spec** |
 | AI service abstraction (`LLMProvider`, `EmbeddingProvider`, `VectorStore`) | ✅ Complete |
 | Stub LLM + Stub embeddings + Qdrant with in-memory fallback | ✅ Complete |
 | Demo RAG corpus + `/rag/query` with citations | ✅ Complete |
 | GitHub PAT collector (real API calls) | ✅ Complete |
 | Envelope-encrypted secret store (AES-256-GCM) | ✅ Complete |
-| Angular shell + dashboard + evidence + controls + integrations + ask AI + export + onboarding UI | ✅ Complete |
-| Published to Docker Hub as `adarshs1612/syncpoint-*:0.4.0` | ✅ Complete |
+| Angular shell + dashboard + evidence + controls + integrations + ask AI + export + onboarding + settings + activity + audit-log + admin UI | ✅ Complete |
+| Published to Docker Hub as `adarshs1612/syncpoint-*:0.7.0` | ✅ Complete |
 
 ## 1. Gap matrix against PROJECT_SPEC3.md
 
@@ -35,16 +49,21 @@
 | P4 | RAG connected to evidence analysis | 🔴 Missing | **M5** |
 | P5 | GitHub OAuth / App | 🟡 Partial (PAT only) | **M6** |
 | P6 | AWS cross-account IAM Role + collector | 🔴 Missing | **M7** |
-| P7 | Scheduled collection (DAILY / WEEKLY) | 🔴 Missing | **M8** |
+| P7 | Scheduled collection (DAILY / WEEKLY) | ✅ **Complete** (shipped 2026-09-04, pulled forward) | **M8** |
 | P8 | Jira OAuth + collector | 🔴 Missing | **M9** |
-| P9 | Customer onboarding state (persistent flag + gate) | 🟡 Partial | **M1** |
-| P10 | Security hardening (malware scanner, secrets audit) | 🟡 Partial | **M10** |
+| P9 | Customer onboarding state (persistent flag + gate) | ✅ **Complete** (shipped 2026-09-03, pulled forward) | **M1** |
+| P10 | Security hardening (malware scanner, secrets audit) | 🟡 Partial — also see BUG-009 (refresh-token revocation), BUG-010 (breached-password check) | **M10** |
 | P11 | End-to-end tests | 🔴 Missing | **M10** |
 | P12 | Production/pilot readiness | 🟡 Partial | **M10** |
 | AI eval (§29) | 30-case classification + 5 injection cases | 🔴 Missing | **M10** |
 | RAG eval (§30) | Retrieval relevance test | 🔴 Missing | **M10** |
 
 Google Workspace is deliberately excluded per PROJECT_SPEC3 §16.
+
+Additional scope shipped that has **no P-number in PROJECT_SPEC3** (business decision, not spec
+gap-driven): Platform Admin Console, subscription request/approve/reject/revoke workflow,
+evidence versioning, audit log viewer, coverage-trend snapshots, activity dashboard. These do not
+replace or reduce any M2–M7/M9/M10 item above.
 
 ## 2. Milestone order
 
@@ -75,6 +94,12 @@ M10 Security + AI/RAG eval + E2E tests + pilot readiness
 ## 3. Milestone specifications
 
 ### M1 — Onboarding gate
+
+**Status: ✅ Shipped 2026-09-03**, as Day 1 of the Core Flows Wiring sprint
+(see [CORE-FLOWS-WIRING.md](CORE-FLOWS-WIRING.md)). As-built matches this spec, with one
+addition: the migration backfilled existing rows as already-passed (`DEFAULT TRUE` at backfill
+time, then `ALTER COLUMN SET DEFAULT FALSE`) so pre-existing orgs and the demo seed weren't
+retroactively locked out — only orgs created after the migration are gated.
 
 **Goal**: persist "onboarding complete" per organization so the flow does not repeat.
 
@@ -222,6 +247,14 @@ M10 Security + AI/RAG eval + E2E tests + pilot readiness
 
 ### M8 — Scheduled collection (PROJECT_SPEC3 §13)
 
+**Status: ✅ Shipped 2026-09-04**, pulled forward ahead of M2–M7
+(see [SETTINGS-AND-SCHEDULED-COLLECTION.md](SETTINGS-AND-SCHEDULED-COLLECTION.md) for the
+as-built design, which differs from the plan below in a few ways: the sweep is a single
+tenant-free `ScheduledCollectionSweep` bean rather than two separate daily/weekly `@Scheduled`
+methods, the cron is one configurable property (`syncpoint.collection.sweep-cron`, default
+hourly) rather than hardcoded daily/weekly crons, and the schedule picker lives on the new
+`/settings` Automation tab rather than directly on each integration card.)
+
 **Goal**: honor the existing `IntegrationSchedule.{MANUAL,DAILY,WEEKLY}` enum.
 
 - `@EnableScheduling` on `ComplianceApplication`
@@ -298,6 +331,12 @@ Applied to every milestone.
 - **Retrieved content is untrusted** — all prompts keep the 4-section separation from spec §8.2
 
 ## 5. Docker Hub tag plan
+
+> **Actual tags diverged from this plan.** `0.6.0` shipped Core Flows Wiring (M1 + UX wiring,
+> not "M1 alone" as planned) and `0.7.0` shipped the Platform Admin Console + subscription
+> workflow + M8 (not M2 as planned). M2 has not shipped. The table below remains the forward
+> plan for M2–M10; whenever M2 actually lands, continue tagging from `0.7.0` upward rather than
+> resetting to `0.6.0`.
 
 | Milestone | Tag | What ships |
 |---|---|---|

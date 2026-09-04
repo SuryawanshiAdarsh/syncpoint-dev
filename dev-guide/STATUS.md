@@ -1,4 +1,4 @@
-# Syncpoint MVP — Status (as of 2026-09-02)
+# Syncpoint MVP — Status (as of 2026-09-04)
 
 At-a-glance status of everything against the two specifications
 (`PROJECT_SPEC.md`, `PROJECT_SPEC2.md`, `PROJECT_SPEC3.md`).
@@ -11,7 +11,53 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 
 ---
 
-## What changed in the current pass (E0 hardening + captions)
+## What changed 2026-09-03 → 2026-09-04 (most recent pass)
+
+This pass absorbed **M1 (onboarding gate)** and **M8 (scheduled collection)** out of their
+original M1→M10 order, plus shipped a large amount of scope **not in the original
+MVP-COMPLETION-PLAN.md at all** (Platform Admin Console, subscription workflow, account
+recovery). M2–M7, M9, M10 (real LLM, real embeddings, RAG ingestion/analysis, GitHub OAuth,
+AWS, Jira, security hardening/E2E) are still outstanding — see
+[MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md) for current gap status.
+
+- ✅ **Core flows wiring** (`CORE-FLOWS-WIRING.md`) — onboarding gate is a real DB-backed flag
+  + route guard (Flyway V16); dashboard re-fetches on navigation; evidence upload/map/analyze/
+  approve all toast + refresh; control-detail has live Confirm/Reject on AI-suggested mappings
+  with an AI Analysis panel.
+- ✅ **Scheduled collection (M8, pulled forward)** + **Organization Settings page**
+  (`SETTINGS-AND-SCHEDULED-COLLECTION.md`) — `PATCH /integrations/{id}/schedule`,
+  tenant-free `ScheduledCollectionSweep` (`@Scheduled`, configurable cron, overlap-guarded),
+  new `/settings` page (General / Members / Automation) exposing previously-unwired
+  `OrganizationController` endpoints.
+- ✅ **Password reset, email verification, member-invite-by-email** (V18 migration,
+  `auth_tokens` table, local Mailpit SMTP catcher) — closes BUG-006. Follow-on gaps tracked as
+  BUG-009 (refresh tokens not revoked on reset) and BUG-010 (no breached-password check).
+- ✅ **Evidence Versioning** (`POST /evidence/{id}/versions`) and **Audit Log Viewer**
+  (`GET /audit-events`, dedicated `/audit-log` page) shipped and verified.
+- ✅ **Coverage trend** — `control_status_snapshots` table, daily snapshot sweep + boot-time
+  backfill, `GET /dashboard/coverage-trend`, stacked-by-status SVG chart on the dashboard.
+- ✅ **Activity dashboard** (`/activity`) — collection-run history, KPIs, filters, per-run
+  expandable log trail; `CollectionTrigger` (MANUAL/SCHEDULED) added as a real column.
+- ✅ **Platform Admin Console** (new, not in original spec) — internal Syncpoint-the-company
+  view of all tenants: `ROLE_PLATFORM_ADMIN`, `subscriptions` table, cross-tenant org
+  list/detail with KPIs, paginated. Every new org registration auto-creates a 14-day trial
+  subscription.
+- ✅ **Subscription request/approve/reject/revoke workflow** (new, not in original spec) —
+  tenant-facing request form in Settings > Billing (pending/approved/rejected status banner,
+  revoke button) + platform-admin approve/reject queue merged into the admin console page.
+  DB-enforced one-pending-request-per-org constraint.
+- ✅ Two real bugs found and fixed: BUG-001 (Review Queue table overflow) and BUG-002
+  (Review Queue deep-link) — both marked Fixed in [BUG-BACKLOG.md](BUG-BACKLOG.md).
+- ✅ **Docker Hub republished as `0.7.0`** for all three images (was stale at `0.5.0`); demo
+  seed massively expanded (60 evidence, 15+ orgs, ~220 audit events) and verified byte-identical
+  in an isolated "friend simulation" pull-only environment.
+- 🟡 **CORS temporarily wildcard** (`SecurityConfig.corsConfigurationSource()` hardcodes
+  `setAllowedOriginPatterns("*")`) for demo convenience — flagged in code as DEMO-ONLY, must
+  revert to the env-driven allow-list before any real production deployment.
+
+---
+
+## What changed in the E0 hardening + captions pass (2026-09-02, prior session)
 
 - ✅ **E0.1** Configuration consolidation — 4 `@ConfigurationProperties` records (Ai / Storage / SecretStore / Security). All 12 `@Value` sites removed.
 - ✅ **E0.2** AI HTTP client deduped — renamed to `AiServiceClient`, shared `HttpClient` bean, `RagController` reduced to a thin proxy.
@@ -34,15 +80,15 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 |-------------------------|:------:|-------|
 | Docker Compose (dev)    | ✅ | [docker-compose.yml](../docker-compose.yml) |
 | Docker Compose (deploy) | ✅ | [deploy/docker-compose.hub.yml](../deploy/docker-compose.hub.yml) |
-| PostgreSQL 16           | ✅ | migrations V1–V14 + repeatable seed |
+| PostgreSQL 16           | ✅ | migrations V1–V21 + repeatable seed |
 | Redis 7                 | 🟡 | running but not yet consumed by app code |
 | Qdrant                  | ✅ | populated at startup with demo corpus |
 | MinIO (S3)              | ✅ | `evidence` bucket auto-created |
 | Spring Boot backend     | ✅ | Java 21, Boot 3.3.4, 30+ endpoints |
 | Angular 18 frontend     | ✅ | 9 feature pages behind nginx |
 | Python AI service       | ✅ | FastAPI + LLM/Embedding abstractions + RAG |
-| Docker Hub images       | ✅ | `adarshs1612/syncpoint-{backend,ai-service,frontend}:0.5.0` + `:latest` |
-| All-in-one appliance    | 🟡 | Image built locally as `0.5.1`; Docker Hub push blocked by network flakes on 1 GB layer |
+| Docker Hub images       | ✅ | `adarshs1612/syncpoint-{backend,ai-service,frontend}:0.7.0` + `:latest` |
+| All-in-one appliance    | 🟡 | Image built locally as `0.5.1`; not rebuilt since — likely stale against `0.7.0`; Docker Hub push blocked by network flakes on 1 GB layer |
 
 ---
 
@@ -70,11 +116,21 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 | Collection runs + items history | ✅ | `collection_runs`, `collection_items` tables |
 | AI analysis: `POST /evidence/{id}/analyze` | ✅ | Backend → AI service → stores `ai_analysis` + creates `AI_SUGGESTED` mapping |
 | AI RAG proxy: `POST /api/v1/rag/query` | ✅ | Authenticated pass-through to AI service |
-| Dashboard endpoints | ✅ | `/dashboard/summary`, `/gaps`, `/recent-evidence` |
+| Dashboard endpoints | ✅ | `/dashboard/summary`, `/gaps`, `/recent-evidence`, `/coverage-trend` |
 | Async audit-package export (ZIP) | ✅ | Full spec §63 layout, incl. evidence hashes |
 | OpenAPI / Swagger UI | ✅ | http://localhost:8080/swagger-ui.html |
 | Testcontainers integration tests | 🟡 | 3 tests exist and pass in principle; re-run against new modules not yet performed |
-| Refresh-token rotation / revocation | ⏳ | Access token expires; refresh is stateless |
+| Refresh-token rotation / revocation | ⏳ | Access token expires; refresh is stateless. See BUG-009 (reset doesn't revoke either) |
+| Onboarding gate (persistent flag + route guard) | ✅ | V16 migration; backfilled existing orgs so only new orgs are gated |
+| Password reset / email verification / invite-by-email | ✅ | V18 migration, `auth_tokens` table, Mailpit for local dev email |
+| Scheduled collection (DAILY/WEEKLY sweep) | ✅ | Tenant-free `ScheduledCollectionSweep`, configurable cron, overlap-guarded |
+| Organization Settings page (General/Members/Automation) | ✅ | Exposes previously-unwired `OrganizationController` endpoints |
+| Evidence versioning (`POST /evidence/{id}/versions`) | ✅ | Resets status/freshness, preserves mappings, audits `EVIDENCE_RENEWED` |
+| Audit log viewer (`GET /audit-events`) | ✅ | Batched actor-name resolution, dedicated `/audit-log` page |
+| Coverage trend snapshots + endpoint | ✅ | Daily sweep + boot-time backfill, `control_status_snapshots` table |
+| Activity dashboard (`/activity`) | ✅ | Collection-run history, KPIs, filters, expandable log trail |
+| Platform Admin Console (cross-tenant org view) | ✅ | Not in original spec — `ROLE_PLATFORM_ADMIN`, `subscriptions` table |
+| Subscription request/approve/reject/revoke workflow | ✅ | Not in original spec — tenant request form + admin review queue |
 
 ---
 
@@ -109,11 +165,16 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 | Control detail + mapped evidence | ✅ | |
 | Evidence: upload / list / map / analyze / approve | ✅ | Multipart upload, dropdown control mapping, AI analyze button |
 | Integrations: connect / test / collect / disconnect | ✅ | GitHub PAT flow; other providers = "coming soon" tiles |
-| Onboarding wizard | ✅ | 5-step guided path (spec §8) |
+| Onboarding wizard | ✅ | 5-step guided path (spec §8); now backed by a real persisted gate + route guard |
 | Ask AI (RAG) | ✅ | Q&A with citations |
 | Audit package export | ✅ | Start job → poll → download ZIP |
-| Route guards (auth + public) | ✅ | |
+| Route guards (auth + public + onboarding) | ✅ | Back-button/bfcache hardened via `replaceUrl: true` on all auth transitions |
 | HTTP interceptor injecting JWT + auto-logout on 401 | ✅ | |
+| Settings (General / Members / Automation) | ✅ | Role-gated OWNER/ADMIN; schedule picker per integration |
+| Activity (`/activity`) | ✅ | Collection-run history + KPIs |
+| Audit Log (`/audit-log`) | ✅ | Filterable event list |
+| Forgot/reset password, verify email, accept invite | ✅ | Public routes, no auth guard |
+| Platform Admin Console (`/admin`, `/admin/:id`) | ✅ | Visible only when `me().platformAdmin` |
 
 ---
 
@@ -152,12 +213,14 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 ## What's remaining to reach a "full" product (post-MVP)
 
 **Security hardening**
-- Refresh-token rotation & revocation
+- Refresh-token rotation & revocation (BUG-009 — reset-password doesn't revoke either)
+- Breached-password check (BUG-010)
 - Password complexity policy + password rotation
 - Malware scanning integration (interface exists as a stub)
 - SSO / SAML / SCIM
 - Full CI/CD with automated Testcontainers + frontend test runs
 - Full test suite re-run against the new modules
+- Revert CORS from demo wildcard back to the env-driven allow-list
 
 **Integrations**
 - GitHub App (full OAuth callback + installation storage)
@@ -169,11 +232,19 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 - Real `OpenAILLMProvider.generate_structured` HTTP call
 - Real embedding provider
 - Richer RAG corpus (multi-tenant document upload UI)
+- RAG connected to evidence analysis (M5)
 - Reranking / hybrid search
 
 **Product**
-- Scheduled collection runs (Manual/Daily/Weekly persisted; scheduler not yet wired)
 - Freshness expiry auto-transitions (currently computed at read time)
-- Notifications (email / webhook)
+- Notifications (email / webhook) — BUG-007
+- Bulk actions for mapping/evidence review — BUG-008
 - Additional frameworks (ISO 27001, HIPAA, etc.)
-- Billing / plan tiers
+- Stripe/payment-processor billing (subscription workflow today is manual platform-admin review, no payment integration)
+- SOC 2 badge / "(DEMO)" label hardcoded — BUG-003 / BUG-004
+- Versioned legal-document acceptance tracking — BUG-005
+
+**Commercial / trust track** (see [PATH-TO-FIRST-CUSTOMER.md](PATH-TO-FIRST-CUSTOMER.md), [BUSINESS.md](BUSINESS.md), [LEGAL.md](LEGAL.md))
+- Legal entity, MSA/TOS/Privacy/DPA, insurance — none started
+- Public HTTPS deployment, backups, monitoring — local Docker only
+- Syncpoint's own SOC 2 — not started

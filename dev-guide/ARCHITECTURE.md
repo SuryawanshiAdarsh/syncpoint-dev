@@ -2,6 +2,10 @@
 
 > Companion to [BUILD-PLAN.md](BUILD-PLAN.md), [MVP-COMPLETION-PLAN.md](MVP-COMPLETION-PLAN.md), and [FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md).
 > This file codifies the invariants every contributor must preserve.
+>
+> **If you are an AI agent or developer about to write new code in this repo, read this entire
+> file first** — especially §16-§19, which capture patterns and mistakes discovered the hard way
+> that are not obvious from reading the existing code alone.
 
 ---
 
@@ -16,7 +20,7 @@ Angular UI  ──HTTPS──▶  Spring Boot API  ──HTTP──▶  FastAPI 
                             └─▶ Envelope-encrypted secret store
 ```
 
-Delivery: 3 published images (`syncpoint-backend`, `syncpoint-ai-service`, `syncpoint-frontend`) **and** an all-in-one `syncpoint-appliance` that colocates everything under s6-overlay.
+Delivery: 3 application images (`syncpoint-backend`, `syncpoint-ai-service`, `syncpoint-frontend`), built from source via `docker compose build` (no images are published to a public registry as of 2026-09-04) **and** an all-in-one `syncpoint-appliance` that colocates everything under s6-overlay.
 
 ## 2. Backend layer contract
 
@@ -190,7 +194,94 @@ Short version:
 6. If the change touches AI, new curl includes an `X-Request-Id` and the value appears in both `docker logs syncpoint-backend` and `docker logs syncpoint-ai`.
 7. `syncpoint-appliance` image builds and boots (`docker build -f Dockerfile.appliance . && docker run --rm -p 4200:4200 syncpoint-appliance` → healthy in < 3 min).
 
-## 16. Non-goals
+## 16. Patterns worth reusing
+
+**Tenant-free background jobs.** `@Scheduled` beans and cross-tenant admin services have no HTTP
+request and therefore no `TenantContext` — calling `TenantContext.require()` inside one throws.
+Instead, these methods take an explicit `organizationId` parameter and loop over
+`organizationRepository.findAll()` themselves. Examples: `ScheduledCollectionSweep`
+(`triggerScheduledCollection(Integration)` uses `integration.getCreatedBy()` as the audit actor),
+`CoverageSnapshotSweep`, `PlatformAdminService`, `SubscriptionRequestAdminService`. Reuse this
+shape for any new cross-org or unattended job — never thread a fake/borrowed `TenantContext`
+through one just to reuse a tenant-scoped service method.
+
+**Batched-aggregate queries (avoid N+1).** Whenever a list endpoint needs a per-row count/tally
+(evidence-mapping counts, collection-run item tallies, coverage-trend snapshots, audit-event actor
+names), add one repository method that does a single `GROUP BY` or `findAllById`/`IN (...)` query
+and returns a projection interface, then join it in memory — never issue one query per row.
+Examples: `CollectionItemRepository.tallyByRunIds`, `ControlStatusSnapshotRepository.tallyByOrganizationIdSince`,
+`userRepository.findAllById(...)` for audit-log actor-name resolution.
+
+**Cross-tenant "admin" service pattern.** Platform-admin-only services (`PlatformAdminService`,
+`SubscriptionRequestAdminService`) never read `TenantContext` — they take an explicit `orgId`/`id`
+parameter and are gated purely by `@PreAuthorize("hasRole('PLATFORM_ADMIN')")` at the controller.
+Do not add tenant filtering logic inside these services; the role check is the only boundary.
+
+**Retroactive gate columns.** When adding a new `BOOLEAN NOT NULL` gate/flag column via migration
+(e.g. `onboarding_completed`), backfill existing rows as already-passed within the same migration
+(`DEFAULT TRUE`, backfill, then `ALTER COLUMN ... SET DEFAULT FALSE`) so pre-existing orgs/users and
+the demo seed are not retroactively locked out — only rows created after the migration should be
+gated by the new default.
+
+## 17. Enums backed by a DB CHECK constraint
+
+Most state-value enums in this codebase (`SubscriptionRequestStatus`, `IntegrationProvider`,
+`EvidenceSourceType`, etc.) are validated by a DB `CHECK` constraint on the column, not just the
+Java/TS type system. **Adding a new enum value is a two-step change, not one**: edit the Java enum
+/ TS union type, **and** add a new Flyway migration that widens the corresponding `CHECK` constraint
+(`ALTER TABLE ... DROP CONSTRAINT ...; ALTER TABLE ... ADD CONSTRAINT ... CHECK (col IN (...))`).
+Forgetting the migration compiles fine and only fails at insert time in whatever environment first
+tries to persist the new value — easy to miss in local testing if the code path isn't exercised.
+
+## 18. Known gotchas (learned the hard way)
+
+- **Java 21 `HttpClient` defaults to HTTP/2.** Calling the AI service (uvicorn) over HTTP/2 silently
+  drops request bodies. `AiServiceClient` and `RagController` force `HttpClient.Version.HTTP_1_1`.
+  Any new outbound HTTP client to a Python/uvicorn backend needs the same override.
+- **`@Async` + `@Transactional` self-invocation bypasses the Spring proxy.** Don't wrap an entire
+  async method in one transaction — persist per-step with individual repository `save()` calls
+  (each is already atomic).
+- **Angular `computed()` only tracks signal reads.** A plain (non-signal) property read inside a
+  `computed()` will not trigger recomputation when it changes. Convert any state a computed depends
+  on into a signal.
+- **Angular route order matters for static-vs-param routes.** A static path segment (e.g.
+  `admin/requests`) must be declared *before* a param route (`admin/:id`) in the same route table,
+  or the router matches the param route first and treats "requests" as an `:id`.
+- **`mvn`/`mvnw` do not work standalone in this environment** — the parent POM resolves against a
+  private corporate Nexus that isn't reachable here, and there's no checked-in wrapper. Use
+  `get_errors` (language server) for compile-sanity checks and `docker compose build <service>` as
+  the real ground-truth compile+package verification.
+- **PowerShell's `Get-Content -Raw` corrupts non-ASCII characters** (em-dashes, curly quotes) when
+  piping a UTF-8 file into `psql` unless `-Encoding UTF8` is passed explicitly. Prefer plain ASCII
+  punctuation in actual SQL string literals in seed files regardless, so this can't bite anyone
+  loading the file a different way.
+- **`docker compose -p <name> up` fails on container-name conflicts** if another Compose project's
+  containers — even stopped ones — still hold the same `container_name:` value (names are global on
+  the host, not scoped per project). Use `docker compose down` (not `stop`) on the other project
+  first; `down` without `-v` does not touch named volumes.
+- **PowerShell 5.1's `Invoke-RestMethod` has no `-Form` parameter** (that's PS7+). For multipart
+  file-upload testing, build the body manually: a boundary GUID, joined
+  Content-Disposition/Content-Type header lines + file bytes + closing boundary, posted with
+  `-ContentType "multipart/form-data; boundary=$boundary"`.
+
+## 19. Frontend conventions not yet in FRONTEND-ARCHITECTURE.md
+
+- **Every user-visible string goes through `shared/captions/captions.ts`.** No inline strings in
+  templates — this is an enforced house rule stated in that file's header, not a suggestion.
+- **Every auth-state-transition navigation uses `{ replaceUrl: true }`.** Login success, register
+  success, logout, onboarding-finish, and the 401 auto-logout interceptor all call
+  `router.navigateByUrl(url, { replaceUrl: true })` so the browser back button / bfcache can never
+  restore a stale pre- or post-auth page. Add this to any new auth-adjacent redirect.
+- **State management is plain Angular signals only** — no NgRx/Akita/Elf at current scale. Known
+  gap, not yet fixed: `GET /auth/me` is independently re-fetched by ~4 different
+  guards/components per session with no caching; a `CurrentUserService` (signal + `shareReplay(1)`)
+  is the fix if this ever becomes a real performance problem.
+- **Guards are UX-only, never the security boundary.** `authGuard`, `publicGuard`,
+  `onboardingGuard`, `platformAdminGuard` all live alongside route definitions in `app.routes.ts`.
+  The real enforcement is always backend `@PreAuthorize` — never add a frontend-only check that
+  isn't backed by an equivalent backend check.
+
+## 20. Non-goals
 
 Do not introduce any of the following without discussion:
 
