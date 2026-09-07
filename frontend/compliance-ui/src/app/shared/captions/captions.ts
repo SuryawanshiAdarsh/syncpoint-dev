@@ -222,6 +222,8 @@ export const CAPTIONS = {
     subtitle:
       'Upload documents, review artifacts collected by integrations, and confirm which control each supports.',
     backToPolicy: (title: string) => `Back to ${title}`,
+    backToControl: (code: string) => `Back to ${code}`,
+    backToReviewQueue: 'Back to Review Queue',
     uploadCardTitle: 'Upload evidence',
     uploadCardCaption:
       'PDF, CSV, JSON, or DOCX. Max 50 MB per file. Every upload is hashed, versioned, and immutable.',

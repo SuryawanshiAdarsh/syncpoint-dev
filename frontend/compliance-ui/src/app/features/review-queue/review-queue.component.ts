@@ -117,7 +117,7 @@ interface QueueItem {
                 </span>
               </td>
               <td style="text-align:right;padding-right:24px;">
-                <a class="btn ghost sm icon-link" [routerLink]="['/evidence']" [queryParams]="{ highlight: item.evidence.id }"
+                <a class="btn ghost sm icon-link" [routerLink]="['/evidence']" [queryParams]="{ highlight: item.evidence.id, fromReviewQueue: 1 }"
                    [attr.aria-label]="c.reviewQueue.goToEvidence" [title]="c.reviewQueue.goToEvidence">
                   <mat-icon>open_in_new</mat-icon>
                 </a>

@@ -245,6 +245,10 @@ public class EvidenceService {
         Evidence e = requireOwned(evidenceId);
         Control control = controlRepo.findById(req.controlId())
                 .orElseThrow(() -> new NotFoundException("Control not found"));
+        if (mappingRepo.existsByEvidenceIdAndControlId(e.getId(), control.getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "MAPPING_EXISTS",
+                    "This evidence is already mapped to " + control.getCode() + ".");
+        }
         UUID actor = TenantContext.require().userId();
         EvidenceControlMapping saved = mappingRepo.save(new EvidenceControlMapping(
                 e.getOrganizationId(), e.getId(), control.getId(),
@@ -397,6 +401,7 @@ public class EvidenceService {
                 .filter(java.util.Objects::nonNull)
                 .min(BigDecimal::compareTo)
                 .orElse(null);
+        List<UUID> mappedControlIds = mappings.stream().map(EvidenceControlMapping::getControlId).toList();
         return new EvidenceResponse(
                 e.getId(), e.getName(), e.getDescription(),
                 e.getSourceType(), e.getSourceSystem(), e.getStatus(), freshness,
@@ -406,7 +411,7 @@ public class EvidenceService {
                 v == null ? null : v.getSizeBytes(),
                 v == null ? null : v.getMimeType(),
                 e.getCreatedAt(),
-                !mappings.isEmpty(), mappings.size(), lowestConfidence);
+                !mappings.isEmpty(), mappings.size(), lowestConfidence, mappedControlIds);
     }
 
     private static EvidenceResponse.FreshnessState computeFreshness(Instant expiresAt) {

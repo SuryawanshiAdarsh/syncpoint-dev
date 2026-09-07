@@ -5,6 +5,7 @@ import com.syncpoint.compliance.evidence.entity.EvidenceStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record EvidenceResponse(
@@ -24,7 +25,8 @@ public record EvidenceResponse(
         Instant createdAt,
         boolean mapped,
         int mappingCount,
-        BigDecimal lowestConfidence
+        BigDecimal lowestConfidence,
+        List<UUID> mappedControlIds
 ) {
     public enum FreshnessState { CURRENT, EXPIRING, EXPIRED }
 }

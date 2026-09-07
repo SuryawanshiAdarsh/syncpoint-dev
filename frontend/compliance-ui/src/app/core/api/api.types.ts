@@ -62,6 +62,7 @@ export interface Evidence {
   mapped: boolean;
   mappingCount: number;
   lowestConfidence?: number;
+  mappedControlIds: string[];
 }
 
 export interface EvidenceVersion {

@@ -129,8 +129,8 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
   `],
   template: `
     <div class="page">
-      <a *ngIf="backLink()" [routerLink]="['/policies', backLink()!.id]" class="back">
-        <mat-icon>arrow_back</mat-icon> {{ c.evidence.backToPolicy(backLink()!.title) }}
+      <a *ngIf="backLink() as bl" [routerLink]="bl.route" class="back">
+        <mat-icon>arrow_back</mat-icon> {{ bl.label }}
       </a>
       <ui-page-header
         [eyebrow]="c.evidence.eyebrow"
@@ -248,7 +248,7 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
                   <mat-form-field appearance="outline" style="width:180px;" subscriptSizing="dynamic">
                     <mat-label>Map to control</mat-label>
                     <mat-select [(ngModel)]="selectedControl[e.id]">
-                      <mat-option *ngFor="let c of controls()" [value]="c.id">{{ c.code }} — {{ c.title }}</mat-option>
+                      <mat-option *ngFor="let c of unmappedControlsFor(e)" [value]="c.id">{{ c.code }} — {{ c.title }}</mat-option>
                     </mat-select>
                   </mat-form-field>
                   <button class="btn ghost sm" [matMenuTriggerFor]="actionMenu" [disabled]="!selectedControl[e.id]">
@@ -327,7 +327,7 @@ export class EvidenceComponent implements OnInit {
   mappedFilter = signal<MappedFilter>('');
   page = signal(0);
   highlightId = signal<string | null>(null);
-  backLink = signal<{ id: string; title: string } | null>(null);
+  backLink = signal<{ route: string[]; label: string } | null>(null);
 
   statusChips = computed<UiFilterChip[]>(() => {
     const list = this.items();
@@ -368,8 +368,15 @@ export class EvidenceComponent implements OnInit {
   ngOnInit(): void {
     const fromPolicy = this.route.snapshot.queryParamMap.get('fromPolicy');
     const fromPolicyTitle = this.route.snapshot.queryParamMap.get('fromPolicyTitle');
+    const fromControl = this.route.snapshot.queryParamMap.get('fromControl');
+    const fromControlCode = this.route.snapshot.queryParamMap.get('fromControlCode');
+    const fromReviewQueue = this.route.snapshot.queryParamMap.get('fromReviewQueue');
     if (fromPolicy && fromPolicyTitle) {
-      this.backLink.set({ id: fromPolicy, title: fromPolicyTitle });
+      this.backLink.set({ route: ['/policies', fromPolicy], label: this.c.evidence.backToPolicy(fromPolicyTitle) });
+    } else if (fromControl && fromControlCode) {
+      this.backLink.set({ route: ['/controls', fromControl], label: this.c.evidence.backToControl(fromControlCode) });
+    } else if (fromReviewQueue) {
+      this.backLink.set({ route: ['/review-queue'], label: this.c.evidence.backToReviewQueue });
     }
     const highlight = this.route.snapshot.queryParamMap.get('highlight');
     if (highlight) {
@@ -400,6 +407,12 @@ export class EvidenceComponent implements OnInit {
     this.page.set(Math.floor(idx / this.pageSize));
     setTimeout(() => document.getElementById('evidence-row-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     setTimeout(() => this.highlightId.set(null), 2500);
+  }
+
+  /** Controls not yet mapped to this evidence item — keeps the picker from offering duplicates. */
+  unmappedControlsFor(e: Evidence): Control[] {
+    const mapped = new Set(e.mappedControlIds ?? []);
+    return this.controls().filter(c => !mapped.has(c.id));
   }
 
   onStatusChipChange(key: string): void {
@@ -463,10 +476,18 @@ export class EvidenceComponent implements OnInit {
   map(evidenceId: string): void {
     const controlId = this.selectedControl[evidenceId];
     if (!controlId) return;
+    this.uploadError.set(null);
     this.api.createMapping(evidenceId, {
       controlId, mappingType: 'HUMAN_CONFIRMED',
       classification: 'COVERED', confidence: 1, reason: 'Reviewer confirmed.',
-    }).subscribe(() => { this.msg.set('Mapping confirmed.'); this.reload(); });
+    }).subscribe({
+      next: () => {
+        this.msg.set('Mapping confirmed.');
+        delete this.selectedControl[evidenceId];
+        this.reload();
+      },
+      error: (e) => this.uploadError.set(e?.error?.message ?? 'Could not create that mapping.'),
+    });
   }
 
   analyze(evidenceId: string): void {

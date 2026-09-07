@@ -12,4 +12,5 @@ public interface EvidenceControlMappingRepository extends JpaRepository<Evidence
     List<EvidenceControlMapping> findByEvidenceIdAndOrganizationId(UUID evidenceId, UUID organizationId);
     List<EvidenceControlMapping> findByControlIdAndOrganizationId(UUID controlId, UUID organizationId);
     Optional<EvidenceControlMapping> findByIdAndEvidenceIdAndOrganizationId(UUID id, UUID evidenceId, UUID organizationId);
+    boolean existsByEvidenceIdAndControlId(UUID evidenceId, UUID controlId);
 }

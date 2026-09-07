@@ -146,7 +146,7 @@ import {
         </div>
 
         <ui-card [title]="c.controlDetail.mappedEvidenceTitle" [caption]="c.controlDetail.mappedEvidenceCaption" padding="flush">
-          <a header-actions class="btn ghost sm" [routerLink]="['/evidence']" [queryParams]="{ control: ctrl.code }">
+          <a header-actions class="btn ghost sm" [routerLink]="['/evidence']" [queryParams]="{ control: ctrl.code, fromControl: ctrl.id, fromControlCode: ctrl.code }">
             <mat-icon>upload</mat-icon>{{ c.controlDetail.uploadEvidence }}
           </a>
 
