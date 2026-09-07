@@ -50,6 +50,7 @@ export const EVIDENCE_SOURCE_META: Readonly<Record<string, StatusVisual>> = {
   [EVIDENCE_SOURCE.AWS]:              { color: 'warning', icon: 'cloud' },
   [EVIDENCE_SOURCE.JIRA]:             { color: 'info',    icon: 'bug_report' },
   [EVIDENCE_SOURCE.GOOGLE_WORKSPACE]: { color: 'info',    icon: 'groups' },
+  [EVIDENCE_SOURCE.POLICY]:           { color: 'brand',   icon: 'gavel' },
 };
 
 export const INTEGRATION_STATUS_META: Readonly<Record<string, StatusVisual>> = {

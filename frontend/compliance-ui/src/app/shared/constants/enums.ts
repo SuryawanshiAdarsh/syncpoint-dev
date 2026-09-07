@@ -36,6 +36,7 @@ export const EVIDENCE_SOURCE = {
   AWS: 'AWS',
   JIRA: 'JIRA',
   GOOGLE_WORKSPACE: 'GOOGLE_WORKSPACE',
+  POLICY: 'POLICY',
 } as const;
 export type EvidenceSourceValue = typeof EVIDENCE_SOURCE[keyof typeof EVIDENCE_SOURCE];
 

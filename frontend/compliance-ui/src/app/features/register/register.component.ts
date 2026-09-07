@@ -108,12 +108,12 @@ import { CAPTIONS } from '@captions';
 
         <div class="steps">
           <div class="step"><span class="num">1</span><span class="txt"><strong>Create your organization.</strong> You'll be the OWNER. Invite team-mates later from Settings.</span></div>
-          <div class="step"><span class="num">2</span><span class="txt"><strong>Pick SOC 2.</strong> Fifteen demo controls are pre-loaded so you can see coverage right away.</span></div>
+          <div class="step"><span class="num">2</span><span class="txt"><strong>Pick SOC 2.</strong> The full Security control catalog is pre-loaded so you can see coverage right away.</span></div>
           <div class="step"><span class="num">3</span><span class="txt"><strong>Connect GitHub</strong> with a fine-grained PAT. Everything stays encrypted and never leaves your server.</span></div>
           <div class="step"><span class="num">4</span><span class="txt"><strong>Watch coverage grow</strong> as the AI suggests mappings and you confirm what fits.</span></div>
         </div>
 
-        <div class="foot">© {{ c.common.appName }} · SOC 2 (DEMO)</div>
+        <div class="foot">© {{ c.common.appName }} · SOC 2</div>
       </div>
 
       <div class="form-wrap">

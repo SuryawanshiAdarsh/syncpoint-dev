@@ -1,9 +1,10 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '@core/api/api.service';
 import { Control, ControlStatus } from '@core/api/api.types';
@@ -24,27 +25,35 @@ import {
   selector: 'app-controls',
   imports: [
     CommonModule, RouterLink, FormsModule,
-    MatFormFieldModule, MatSelectModule,
+    MatFormFieldModule, MatSelectModule, MatIconModule,
     UiPageHeaderComponent, UiCardComponent, UiEmptyStateComponent,
     UiSearchComponent, UiToolbarComponent, UiFilterChipsComponent,
     UiControlStatusBadgeComponent,
   ],
   styles: [`
     .cat-cell {
-      display: inline-flex; align-items: center;
-      padding: 2px 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 4px 12px;
       background: var(--color-surface-muted);
       border: 1px solid var(--color-border);
-      border-radius: var(--radius-full);
+      border-radius: var(--radius-md);
       font-size: var(--text-sm);
       color: var(--color-text-secondary);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.3;
+      min-width: 150px;
+      max-width: 100%;
+      text-align: center;
     }
+    .data-table { table-layout: fixed; }
     .code { font-family: var(--font-mono); font-weight: var(--weight-medium); }
+    .title-cell { cursor: pointer; }
     .desc-line {
       color: var(--color-text-muted);
       font-size: var(--text-sm);
       margin-top: 2px;
-      max-width: 520px;
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -54,6 +63,60 @@ import {
       font-size: var(--text-sm);
       padding: 12px var(--space-6);
     }
+
+    /* Quick-view modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+      padding: var(--space-4);
+      animation: modalFadeIn 150ms ease-out;
+    }
+    .modal-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-width: 560px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: var(--space-6);
+    }
+    .modal-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .modal-code {
+      display: block;
+      font-size: var(--text-sm);
+      color: var(--color-primary-text);
+      margin-bottom: 4px;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: var(--weight-semibold);
+      margin: 0;
+      line-height: 1.3;
+    }
+    .modal-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 4px; border-radius: var(--radius-md);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+    }
+    .modal-close:hover { background: var(--color-surface-muted); }
+    .modal-meta { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; }
+    .modal-description {
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+      font-size: var(--text-sm);
+      white-space: pre-wrap;
+    }
+    .modal-actions { margin-top: var(--space-5); display: flex; justify-content: flex-end; }
+    @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
   `],
   template: `
     <div class="page">
@@ -91,6 +154,12 @@ import {
         </div>
 
         <table class="data-table" *ngIf="filtered().length; else emptyT">
+          <colgroup>
+            <col style="width: 9%;">
+            <col style="width: 42%;">
+            <col style="width: 29%;">
+            <col style="width: 20%;">
+          </colgroup>
           <thead>
             <tr>
               <th>Code</th>
@@ -104,11 +173,11 @@ import {
               <td>
                 <a [routerLink]="['/controls', c.id]" class="code">{{ c.code }}</a>
               </td>
-              <td>
+              <td class="title-cell" [title]="c.description" (click)="selectedControl.set(c)">
                 <div style="font-weight: var(--weight-medium);">{{ c.title }}</div>
                 <div class="desc-line">{{ c.description }}</div>
               </td>
-              <td><span class="cat-cell">{{ c.category }}</span></td>
+              <td><span class="cat-cell" [title]="c.category">{{ c.category }}</span></td>
               <td style="text-align: right;">
                 <ui-control-status-badge [status]="c.status"></ui-control-status-badge>
               </td>
@@ -125,6 +194,28 @@ import {
         </ng-template>
       </ui-card>
     </div>
+
+    <div class="modal-backdrop" *ngIf="selectedControl() as sc" (click)="selectedControl.set(null)">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <span class="code modal-code">{{ sc.code }}</span>
+            <h2 class="modal-title">{{ sc.title }}</h2>
+          </div>
+          <button class="modal-close" type="button" (click)="selectedControl.set(null)" aria-label="Close">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        <div class="modal-meta">
+          <span class="cat-cell">{{ sc.category }}</span>
+          <ui-control-status-badge [status]="sc.status"></ui-control-status-badge>
+        </div>
+        <p class="modal-description">{{ sc.description }}</p>
+        <div class="modal-actions">
+          <a class="btn primary" [routerLink]="['/controls', sc.id]" (click)="selectedControl.set(null)">View mapped evidence →</a>
+        </div>
+      </div>
+    </div>
   `,
 })
 export class ControlsComponent implements OnInit {
@@ -135,6 +226,7 @@ export class ControlsComponent implements OnInit {
   search = signal('');
   statusFilter = signal<'' | ControlStatus>('');
   categoryFilter = signal('');
+  selectedControl = signal<Control | null>(null);
 
   categories = computed(() =>
     Array.from(new Set(this.all().map(c => c.category))).sort()
@@ -172,5 +264,10 @@ export class ControlsComponent implements OnInit {
 
   setStatus(key: string): void {
     this.statusFilter.set(key as '' | ControlStatus);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.selectedControl.set(null);
   }
 }

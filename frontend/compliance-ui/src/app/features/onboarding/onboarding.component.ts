@@ -115,7 +115,7 @@ import { CAPTIONS } from '@captions';
         <div class="step-body">
           <h3>{{ c.onboarding.step1Title }}</h3>
           <p class="desc">
-            <span *ngIf="framework() as f">✓ <b>{{ f.name }}</b> ({{ f.version }}) is active for your workspace. 15 controls are pre-loaded.</span>
+            <span *ngIf="framework() as f">✓ <b>{{ f.name }}</b> ({{ f.version }}) is active for your workspace. The full control catalog is pre-loaded.</span>
             <span *ngIf="!framework()">{{ c.onboarding.step1Body }}</span>
           </p>
         </div>

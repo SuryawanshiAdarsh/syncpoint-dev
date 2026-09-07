@@ -46,6 +46,13 @@ public class EmailService {
                         + "Verify here (expires in 24 hours): " + verifyLink);
     }
 
+    public void sendPolicyAcknowledgmentEmail(String to, String policyTitle, String portalLink) {
+        send(to, "Please acknowledge: " + policyTitle,
+                "Your organization has published or updated a policy that requires your acknowledgment.\n\n"
+                        + "Policy: " + policyTitle + "\n\n"
+                        + "Review and acknowledge it here: " + portalLink);
+    }
+
     private void send(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

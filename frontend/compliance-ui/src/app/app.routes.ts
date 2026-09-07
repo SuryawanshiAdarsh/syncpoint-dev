@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard, onboardingGuard, platformAdminGuard } from './core/auth/auth.guard';
+import { authGuard, publicGuard, onboardingGuard, platformAdminGuard, acknowledgerGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -30,15 +30,24 @@ export const routes: Routes = [
     loadComponent: () => import('./features/verify-email/verify-email.component').then(m => m.VerifyEmailComponent),
   },
   {
+    // No auth guard: this is the login-free policy acknowledgment portal, resolved entirely
+    // from the ?token= magic link — not rendered inside the shell, no nav reachable from it.
+    path: 'policy-portal',
+    loadComponent: () => import('./features/policy-portal/policy-portal.component').then(m => m.PolicyPortalComponent),
+  },
+  {
     path: '',
-    canActivate: [authGuard, onboardingGuard],
+    canActivate: [authGuard, onboardingGuard, acknowledgerGuard],
     loadComponent: () => import('./shared/shell/shell.component').then(m => m.ShellComponent),
     children: [
+      { path: 'my-policies',  loadComponent: () => import('./features/my-policies/my-policies.component').then(m => m.MyPoliciesComponent) },
       { path: 'dashboard',    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'review-queue', loadComponent: () => import('./features/review-queue/review-queue.component').then(m => m.ReviewQueueComponent) },
       { path: 'controls',     loadComponent: () => import('./features/controls/controls.component').then(m => m.ControlsComponent) },
       { path: 'controls/:id', loadComponent: () => import('./features/controls/control-detail.component').then(m => m.ControlDetailComponent) },
       { path: 'evidence',     loadComponent: () => import('./features/evidence/evidence.component').then(m => m.EvidenceComponent) },
+      { path: 'policies',     loadComponent: () => import('./features/policies/policies.component').then(m => m.PoliciesComponent) },
+      { path: 'policies/:id', loadComponent: () => import('./features/policies/policy-detail.component').then(m => m.PolicyDetailComponent) },
       { path: 'integrations', loadComponent: () => import('./features/integrations/integrations.component').then(m => m.IntegrationsComponent) },
       { path: 'activity',     loadComponent: () => import('./features/activity/activity.component').then(m => m.ActivityComponent) },
       { path: 'onboarding',   loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },

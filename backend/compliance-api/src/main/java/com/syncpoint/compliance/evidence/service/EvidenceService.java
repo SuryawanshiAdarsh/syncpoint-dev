@@ -116,6 +116,17 @@ public class EvidenceService {
 
     @Transactional
     public EvidenceResponse upload(String name, String description, MultipartFile file) {
+        return upload(name, description, file, EvidenceSourceType.MANUAL_UPLOAD, "manual-upload");
+    }
+
+    /**
+     * Same upload pipeline (validation, hashing, storage, versioning), but lets a caller outside
+     * the Evidence feature (e.g. PolicyService) attribute the resulting Evidence row to a
+     * different source type/system instead of always MANUAL_UPLOAD.
+     */
+    @Transactional
+    public EvidenceResponse upload(String name, String description, MultipartFile file,
+                                   EvidenceSourceType sourceType, String sourceSystem) {
         ValidatedFile vf = validateAndRead(file);
         TenantContext.Principal actor = TenantContext.require();
         Instant now = Instant.now();
@@ -124,8 +135,8 @@ public class EvidenceService {
                 actor.organizationId(),
                 trim255(name != null ? name : file.getOriginalFilename()),
                 description,
-                EvidenceSourceType.MANUAL_UPLOAD,
-                "manual-upload",
+                sourceType,
+                sourceSystem,
                 EvidenceStatus.COLLECTED,
                 now,
                 now.plus(365, ChronoUnit.DAYS),
@@ -141,7 +152,7 @@ public class EvidenceService {
 
         audit.record(actor.organizationId(), actor.userId(),
                 AuditEvents.EVIDENCE_CREATED, "evidence", evidence.getId(),
-                Map.of("source", "MANUAL_UPLOAD", "sizeBytes", vf.bytes().length, "contentHash", vf.hash()));
+                Map.of("source", sourceType.name(), "sizeBytes", vf.bytes().length, "contentHash", vf.hash()));
 
         return toResponse(evidence, version, List.of());
     }

@@ -99,8 +99,12 @@ INSERT INTO subscription_requests (organization_id, requested_by, requested_plan
 
 
 -- -----------------------------------------------------------------------------
--- 2. Sample evidence — one artifact per mapped control (12 of 15; CC8.2, CC9.2,
---    and P1.1 are deliberately left without evidence to demonstrate real gaps).
+-- 2. Sample evidence — one artifact per mapped control (12 of 15 originally-
+--    curated controls; CC9.2 is deliberately left without evidence to
+--    demonstrate a real gap. The control catalog was expanded to the full
+--    38-control AICPA-structured set in R__seed_soc2_demo.sql -- the ~23
+--    newly-added controls have no evidence yet and will show MISSING, which
+--    is intentional rather than a fabricated coverage story.
 --
 --    NOTE: evidence_versions rows point at storage_keys that will not exist
 --    in MinIO because this SQL seed does not upload bytes. The application
@@ -302,11 +306,13 @@ VALUES
      1024, 'application/pdf', 'manual/1', NOW() - INTERVAL '13 days');
 
 -- -----------------------------------------------------------------------------
--- 3. Mappings — final tally across all 15 controls:
+-- 3. Mappings — final tally across the 15 originally-curated controls:
 --      7 COVERED (CC6.2, CC6.3, CC6.6, CC7.1, CC7.2, A1.1, C1.1)
 --      2 PARTIAL (CC6.7, CC9.1)
 --      3 NEEDS_REVIEW (CC6.1, CC8.1, A1.2)
---      3 MISSING (CC8.2, CC9.2, P1.1 — no evidence collected yet)
+--      1 MISSING (CC9.2 — no evidence collected yet)
+--    Plus ~23 additional controls from the full AICPA catalog expansion,
+--    all MISSING until real evidence is collected for them.
 -- -----------------------------------------------------------------------------
 
 INSERT INTO evidence_control_mappings (id, organization_id, evidence_id,
@@ -524,13 +530,11 @@ WITH org AS (SELECT '00000000-0000-4000-a000-000000000001'::uuid AS id),
          ('CC7.1', 'COVERED',       6),
          ('CC7.2', 'COVERED',       8),
          ('CC8.1', 'NEEDS_REVIEW',  1),
-         ('CC8.2', 'MISSING',       0),
          ('CC9.1', 'PARTIAL',       4),
          ('CC9.2', 'MISSING',       0),
          ('A1.1',  'COVERED',      11),
          ('A1.2',  'NEEDS_REVIEW',  3),
-         ('C1.1',  'COVERED',      13),
-         ('P1.1',  'MISSING',       0)
+         ('C1.1',  'COVERED',      13)
        ) AS t(code, final_status, days_to_reach)
      )
 INSERT INTO control_status_snapshots (organization_id, control_id, status, snapshot_date)

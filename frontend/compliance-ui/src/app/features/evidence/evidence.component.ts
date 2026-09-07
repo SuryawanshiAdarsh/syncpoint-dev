@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -33,7 +33,7 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
   standalone: true,
   selector: 'app-evidence',
   imports: [
-    CommonModule, FormsModule, MatButtonModule,
+    CommonModule, FormsModule, RouterLink, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatMenuModule,
     UiPageHeaderComponent, UiCardComponent, UiEmptyStateComponent,
     UiSearchComponent, UiToolbarComponent, UiFilterChipsComponent,
@@ -118,9 +118,20 @@ type MappedFilter = '' | 'MAPPED' | 'UNMAPPED';
       padding: 14px var(--space-6);
       border-top: 1px solid var(--color-divider);
     }
+
+    .back {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--color-text-muted); font-size: 13px; margin-bottom: 16px;
+      transition: color var(--transition-fast);
+    }
+    .back:hover { color: var(--color-text); }
+    .back mat-icon { font-size: 16px; height: 16px; width: 16px; }
   `],
   template: `
     <div class="page">
+      <a *ngIf="backLink()" [routerLink]="['/policies', backLink()!.id]" class="back">
+        <mat-icon>arrow_back</mat-icon> {{ c.evidence.backToPolicy(backLink()!.title) }}
+      </a>
       <ui-page-header
         [eyebrow]="c.evidence.eyebrow"
         [title]="c.evidence.title"
@@ -316,6 +327,7 @@ export class EvidenceComponent implements OnInit {
   mappedFilter = signal<MappedFilter>('');
   page = signal(0);
   highlightId = signal<string | null>(null);
+  backLink = signal<{ id: string; title: string } | null>(null);
 
   statusChips = computed<UiFilterChip[]>(() => {
     const list = this.items();
@@ -354,6 +366,11 @@ export class EvidenceComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    const fromPolicy = this.route.snapshot.queryParamMap.get('fromPolicy');
+    const fromPolicyTitle = this.route.snapshot.queryParamMap.get('fromPolicyTitle');
+    if (fromPolicy && fromPolicyTitle) {
+      this.backLink.set({ id: fromPolicy, title: fromPolicyTitle });
+    }
     const highlight = this.route.snapshot.queryParamMap.get('highlight');
     if (highlight) {
       // Reset every filter so the linked-to row is guaranteed to be visible, regardless of its status.

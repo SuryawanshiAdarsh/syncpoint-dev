@@ -44,6 +44,7 @@ export class UiSourcePillComponent {
     AWS:              'cloud',
     JIRA:             'bug_report',
     GOOGLE_WORKSPACE: 'groups',
+    POLICY:           'gavel',
   } as const)[this._source()]);
 
   readonly label = computed(() => ({
@@ -52,5 +53,6 @@ export class UiSourcePillComponent {
     AWS:              'AWS',
     JIRA:             'Jira',
     GOOGLE_WORKSPACE: 'Google Workspace',
+    POLICY:           'Policy',
   } as const)[this._source()]);
 }

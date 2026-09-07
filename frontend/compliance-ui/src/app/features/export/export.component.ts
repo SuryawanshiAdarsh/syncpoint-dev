@@ -132,6 +132,10 @@ import { CAPTIONS } from '@captions';
             <div><div class="title">controls/</div><div class="sub">{{ c.export.contentControls }}</div></div>
           </div>
           <div class="content-tile">
+            <mat-icon>gavel</mat-icon>
+            <div><div class="title">policies/</div><div class="sub">{{ c.export.contentPolicies }}</div></div>
+          </div>
+          <div class="content-tile">
             <mat-icon>data_object</mat-icon>
             <div><div class="title">audit-log.json</div><div class="sub">{{ c.export.contentAudit }}</div></div>
           </div>

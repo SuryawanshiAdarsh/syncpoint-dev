@@ -5,7 +5,7 @@ export interface TokenResponse {
   expiresIn: number;
 }
 
-export type Role = 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER';
+export type Role = 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER' | 'ACKNOWLEDGER';
 
 export interface Me {
   userId: string;
@@ -40,7 +40,7 @@ export interface Control {
   status: ControlStatus;
 }
 
-export type EvidenceSourceType = 'MANUAL_UPLOAD' | 'GITHUB' | 'AWS' | 'JIRA' | 'GOOGLE_WORKSPACE';
+export type EvidenceSourceType = 'MANUAL_UPLOAD' | 'GITHUB' | 'AWS' | 'JIRA' | 'GOOGLE_WORKSPACE' | 'POLICY';
 export type EvidenceStatus = 'COLLECTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 export type FreshnessState = 'CURRENT' | 'EXPIRING' | 'EXPIRED';
 
@@ -104,6 +104,75 @@ export interface ControlMapping {
   confidence?: number;
   reason?: string;
   mappedAt: string;
+}
+
+export type PolicyStatus = 'PUBLISHED' | 'ARCHIVED';
+
+export interface Policy {
+  id: string;
+  title: string;
+  category: string;
+  description?: string;
+  status: PolicyStatus;
+  ownerUserId?: string;
+  ownerName?: string;
+  nextReviewDate?: string;
+  currentVersion: number;
+  evidenceId?: string;
+  mappedControlCodes: string[];
+  acknowledgedCount: number;
+  totalMembers: number;
+  acknowledgedByMe: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyAcknowledgment {
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  acknowledgedAt?: string;
+}
+
+export interface PolicyDetail {
+  policy: Policy;
+  roster: PolicyAcknowledgment[];
+}
+
+export interface PolicyCoverage {
+  totalControls: number;
+  coveredCount: number;
+  coveredControlCodes: string[];
+  uncoveredControlCodes: string[];
+}
+
+export type PolicyPortalStatus = 'PENDING' | 'ACKNOWLEDGED';
+
+export interface PolicyPortalItem {
+  id: string;
+  title: string;
+  category: string;
+  currentVersion: number;
+  status: PolicyPortalStatus;
+  acknowledgedAt?: string;
+}
+
+export interface PolicyPortalPage {
+  items: PolicyPortalItem[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface PolicyPortalDetail {
+  id: string;
+  title: string;
+  category: string;
+  description?: string;
+  currentVersion: number;
+  status: PolicyPortalStatus;
+  hasDocument: boolean;
 }
 
 /** AI reasoning summary for the Control Detail "AI analysis" panel. */

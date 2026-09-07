@@ -67,7 +67,7 @@ DEMO_DOCUMENTS: List[Dict] = [
     },
     {
         "name": "change-management-guidance",
-        "section": "CC8.1 CC8.2",
+        "section": "CC8.1",
         "framework": "SOC2",
         "framework_version": "2022",
         "control_code": "CC8.1",

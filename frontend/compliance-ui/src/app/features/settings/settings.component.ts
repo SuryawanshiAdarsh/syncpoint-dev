@@ -173,6 +173,7 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
                 <mat-option value="ADMIN">Admin</mat-option>
                 <mat-option value="REVIEWER">Reviewer</mat-option>
                 <mat-option value="VIEWER">Viewer</mat-option>
+                <mat-option value="ACKNOWLEDGER">Acknowledger (policies only)</mat-option>
               </mat-select>
             </mat-form-field>
             <ui-button variant="primary" [loading]="inviting()" [loadingText]="c.settings.invitingButton"
@@ -193,6 +194,7 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
                 <mat-option value="ADMIN">Admin</mat-option>
                 <mat-option value="REVIEWER">Reviewer</mat-option>
                 <mat-option value="VIEWER">Viewer</mat-option>
+                <mat-option value="ACKNOWLEDGER">Acknowledger (policies only)</mat-option>
               </mat-select>
             </mat-form-field>
             <ng-template #roleBadge><ui-badge variant="info">{{ m.role }}</ui-badge></ng-template>

@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
  *   <ui-page-header
  *      eyebrow="Compliance"
  *      title="Controls"
- *      subtitle="15 SOC 2 demo controls…">
+ *      subtitle="38 SOC 2 controls…">
  *     <ui-button variant="primary">New control</ui-button>
  *   </ui-page-header>
  */

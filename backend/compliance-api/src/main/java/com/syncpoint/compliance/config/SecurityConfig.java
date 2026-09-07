@@ -2,6 +2,7 @@ package com.syncpoint.compliance.config;
 
 import com.syncpoint.compliance.common.security.AuthRateLimitFilter;
 import com.syncpoint.compliance.common.security.JwtAuthenticationFilter;
+import com.syncpoint.compliance.common.security.RestAccessDeniedHandler;
 import com.syncpoint.compliance.common.security.RestAuthenticationEntryPoint;
 import com.syncpoint.compliance.config.properties.SecurityProperties;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,6 +38,9 @@ public class SecurityConfig {
             "/api/v1/auth/reset-password",
             "/api/v1/auth/accept-invite",
             "/api/v1/auth/verify-email",
+            // Login-free policy acknowledgment portal — not JWT-authenticated, but every handler
+            // independently validates its own magic-link token (see PolicyPortalController).
+            "/api/v1/policy-portal/**",
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
@@ -44,18 +50,29 @@ public class SecurityConfig {
             "/swagger-ui/**"
     };
 
+    // ACKNOWLEDGER is a real, JWT-authenticated login (see Role.java) restricted to exactly
+    // these endpoints -- everything else under /api/v1/** is blocked for that role below.
+    private static final String[] ACKNOWLEDGER_ALLOWED_ENDPOINTS = {
+            "/api/v1/auth/me",
+            "/api/v1/my-policies",
+            "/api/v1/my-policies/**"
+    };
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
     private final List<String> corsAllowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           AuthRateLimitFilter authRateLimitFilter,
                           RestAuthenticationEntryPoint authenticationEntryPoint,
+                          RestAccessDeniedHandler accessDeniedHandler,
                           SecurityProperties securityProperties) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authRateLimitFilter = authRateLimitFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
         List<String> configured = securityProperties.corsAllowedOriginsList();
         this.corsAllowedOrigins = configured.isEmpty()
                 ? List.of("http://localhost:*", "http://127.0.0.1:*")
@@ -68,10 +85,15 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(eh -> eh.authenticationEntryPoint(authenticationEntryPoint))
+                .exceptionHandling(eh -> eh
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(ACKNOWLEDGER_ALLOWED_ENDPOINTS).authenticated()
+                        .requestMatchers("/api/v1/**")
+                            .access(AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("ACKNOWLEDGER")))
                         .anyRequest().authenticated())
                 .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

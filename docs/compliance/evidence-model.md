@@ -187,7 +187,7 @@ controls in our demo catalogue. Reviewers still make the final call.
 | IdP MFA configuration + user enrolment list  | CC6.6            |
 | Access-review sign-off (quarterly)           | CC6.3            |
 | IAM user list + role assignments             | CC6.1, CC6.2     |
-| GitHub branch-protection status              | CC8.1, CC8.2     |
+| GitHub branch-protection status              | CC8.1            |
 | Pull request history with mandatory review   | CC8.1            |
 | Encryption-at-rest configuration (KMS, S3)   | CC6.7, C1.1      |
 | TLS configuration for public endpoints       | CC6.7            |

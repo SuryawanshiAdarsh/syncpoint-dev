@@ -16,8 +16,11 @@ export const publicGuard: CanActivateFn = () => {
   const store = inject(TokenStore);
   const router = inject(Router);
   if (!store.isAuthenticated()) return true;
-  router.navigateByUrl('/dashboard', { replaceUrl: true });
-  return false;
+  const api = inject(ApiService);
+  return api.me().pipe(
+    map(me => router.parseUrl(me.role === 'ACKNOWLEDGER' ? '/my-policies' : '/dashboard')),
+    catchError(() => of(true)),
+  );
 };
 
 /**
@@ -46,6 +49,22 @@ export const platformAdminGuard: CanActivateFn = () => {
   const router = inject(Router);
   return api.me().pipe(
     map(me => (me.platformAdmin ? true : router.parseUrl('/dashboard'))),
+    catchError(() => of(router.parseUrl('/login'))),
+  );
+};
+
+/**
+ * ACKNOWLEDGER is a restricted real login (see Role in api.types.ts) meant to see ONLY the
+ * My Policies page — this is a UX-level redirect only; the backend independently enforces the
+ * same restriction on every /api/v1/** endpoint (see SecurityConfig.ACKNOWLEDGER_ALLOWED_ENDPOINTS),
+ * so a bug here can never grant broader access than the server allows.
+ */
+export const acknowledgerGuard: CanActivateFn = (_route, state) => {
+  if (state.url.startsWith('/my-policies')) return true;
+  const api = inject(ApiService);
+  const router = inject(Router);
+  return api.me().pipe(
+    map(me => (me.role === 'ACKNOWLEDGER' ? router.parseUrl('/my-policies') : true)),
     catchError(() => of(router.parseUrl('/login'))),
   );
 };

@@ -3,6 +3,8 @@ package com.syncpoint.compliance.export.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.syncpoint.compliance.audit.AuditEvents;
 import com.syncpoint.compliance.audit.service.AuditService;
+import com.syncpoint.compliance.auth.entity.User;
+import com.syncpoint.compliance.auth.repository.UserRepository;
 import com.syncpoint.compliance.common.exception.NotFoundException;
 import com.syncpoint.compliance.common.tenant.TenantContext;
 import com.syncpoint.compliance.compliance.entity.Control;
@@ -17,6 +19,13 @@ import com.syncpoint.compliance.export.dto.ExportJobResponse;
 import com.syncpoint.compliance.export.entity.ExportJob;
 import com.syncpoint.compliance.export.entity.ExportJobStatus;
 import com.syncpoint.compliance.export.repository.ExportJobRepository;
+import com.syncpoint.compliance.organization.entity.OrganizationMember;
+import com.syncpoint.compliance.organization.repository.OrganizationMemberRepository;
+import com.syncpoint.compliance.policy.entity.Policy;
+import com.syncpoint.compliance.policy.entity.PolicyAcknowledgment;
+import com.syncpoint.compliance.policy.entity.PolicyStatus;
+import com.syncpoint.compliance.policy.repository.PolicyAcknowledgmentRepository;
+import com.syncpoint.compliance.policy.repository.PolicyRepository;
 import com.syncpoint.compliance.storage.ObjectStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +37,12 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -44,6 +56,10 @@ public class ExportService {
     private final EvidenceVersionRepository versionRepo;
     private final EvidenceControlMappingRepository mappingRepo;
     private final ControlRepository controlRepo;
+    private final PolicyRepository policyRepo;
+    private final PolicyAcknowledgmentRepository policyAckRepo;
+    private final OrganizationMemberRepository memberRepo;
+    private final UserRepository userRepo;
     private final ObjectStorageService storage;
     private final AuditService audit;
     private final ObjectMapper mapper;
@@ -53,6 +69,10 @@ public class ExportService {
                          EvidenceVersionRepository versionRepo,
                          EvidenceControlMappingRepository mappingRepo,
                          ControlRepository controlRepo,
+                         PolicyRepository policyRepo,
+                         PolicyAcknowledgmentRepository policyAckRepo,
+                         OrganizationMemberRepository memberRepo,
+                         UserRepository userRepo,
                          ObjectStorageService storage,
                          AuditService audit,
                          ObjectMapper mapper) {
@@ -61,6 +81,10 @@ public class ExportService {
         this.versionRepo = versionRepo;
         this.mappingRepo = mappingRepo;
         this.controlRepo = controlRepo;
+        this.policyRepo = policyRepo;
+        this.policyAckRepo = policyAckRepo;
+        this.memberRepo = memberRepo;
+        this.userRepo = userRepo;
         this.storage = storage;
         this.audit = audit;
         this.mapper = mapper;
@@ -124,7 +148,9 @@ public class ExportService {
             // README
             put(zip, "README.txt", ("Syncpoint SOC 2 Evidence Package\n" +
                     "Generated at: " + Instant.now() + "\n" +
-                    "This package contains evidence records and their control mappings.\n" +
+                    "This package contains evidence records and their control mappings, plus\n" +
+                    "a policies/ section with published policy documents and employee\n" +
+                    "acknowledgment rosters.\n" +
                     "The product does NOT determine SOC 2 compliance.\n").getBytes(StandardCharsets.UTF_8));
 
             // index.csv
@@ -184,6 +210,77 @@ public class ExportService {
                     String ext = guessExt(v.getMimeType());
                     put(zip, base + "evidence-files/" + e.getId() + ext, content);
                 }
+            }
+
+            // policies/ — published policy documents + acknowledgment rosters
+            List<Policy> policies = policyRepo.findByOrganizationIdOrderByCreatedAtDesc(orgId).stream()
+                    .filter(p -> p.getStatus() == PolicyStatus.PUBLISHED)
+                    .toList();
+            if (!policies.isEmpty()) {
+                List<PolicyAcknowledgment> allAcks = policyAckRepo.findByOrganizationId(orgId);
+                List<OrganizationMember> members = memberRepo.findByOrganizationIdOrderByCreatedAtAsc(orgId);
+                Set<UUID> userIds = new HashSet<>();
+                members.forEach(m -> userIds.add(m.getUserId()));
+                policies.forEach(p -> { if (p.getOwnerUserId() != null) userIds.add(p.getOwnerUserId()); });
+                Map<UUID, User> usersById = userIds.isEmpty() ? Map.of() :
+                        userRepo.findAllById(userIds).stream().collect(Collectors.toMap(User::getId, u -> u));
+
+                StringBuilder policyCsv = new StringBuilder();
+                policyCsv.append("policy_id,title,category,owner,current_version,mapped_controls,acknowledged,next_review_date\n");
+
+                for (Policy p : policies) {
+                    List<String> mappedCodes = allMappings.stream()
+                            .filter(m -> p.getEvidenceId() != null && m.getEvidenceId().equals(p.getEvidenceId()))
+                            .map(m -> controlsById.get(m.getControlId()))
+                            .filter(java.util.Objects::nonNull)
+                            .map(Control::getCode).distinct().sorted().toList();
+
+                    List<PolicyAcknowledgment> currentAcks = allAcks.stream()
+                            .filter(a -> a.getPolicyId().equals(p.getId()) && a.getPolicyVersion() == p.getCurrentVersion())
+                            .toList();
+
+                    User owner = p.getOwnerUserId() == null ? null : usersById.get(p.getOwnerUserId());
+                    policyCsv.append(String.join(",", List.of(
+                            p.getId().toString(),
+                            csvQuote(p.getTitle()),
+                            csvQuote(p.getCategory()),
+                            csvQuote(owner == null ? "" : owner.getName()),
+                            String.valueOf(p.getCurrentVersion()),
+                            String.join(";", mappedCodes),
+                            currentAcks.size() + "/" + members.size(),
+                            p.getNextReviewDate() == null ? "" : p.getNextReviewDate().toString()
+                    ))).append('\n');
+
+                    String base = "policies/" + p.getId() + "/";
+
+                    if (p.getEvidenceId() != null) {
+                        EvidenceVersion v = versionRepo.findFirstByEvidenceIdOrderByVersionDesc(p.getEvidenceId()).orElse(null);
+                        if (v != null) {
+                            byte[] content;
+                            try {
+                                content = storage.get(v.getStorageKey());
+                            } catch (RuntimeException ex) {
+                                content = ("could not fetch policy document: " + ex.getMessage()).getBytes(StandardCharsets.UTF_8);
+                            }
+                            put(zip, base + "document" + guessExt(v.getMimeType()), content);
+                        }
+                    }
+
+                    List<Map<String, Object>> roster = members.stream().map(m -> {
+                        User u = usersById.get(m.getUserId());
+                        PolicyAcknowledgment ack = currentAcks.stream()
+                                .filter(a -> a.getUserId().equals(m.getUserId())).findFirst().orElse(null);
+                        Map<String, Object> row = new HashMap<>();
+                        row.put("userId", m.getUserId().toString());
+                        row.put("name", u == null ? "" : u.getName());
+                        row.put("email", u == null ? "" : u.getEmail());
+                        row.put("acknowledgedAt", ack == null ? null : ack.getAcknowledgedAt().toString());
+                        return row;
+                    }).toList();
+                    put(zip, base + "acknowledgments.json", mapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(roster));
+                }
+
+                put(zip, "policies/index.csv", policyCsv.toString().getBytes(StandardCharsets.UTF_8));
             }
 
             // audit-log.json — best-effort summary; audit event content is app-internal

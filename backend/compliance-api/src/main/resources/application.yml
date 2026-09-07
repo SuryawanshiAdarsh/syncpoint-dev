@@ -76,6 +76,12 @@ syncpoint:
   coverage:
     # Daily job that snapshots every org's live control status for the coverage-trend chart.
     snapshot-cron: ${COVERAGE_SNAPSHOT_CRON:0 30 0 * * *}
+  policy:
+    # MAGIC_LINK: login-free emailed link (see PolicyAckTokenService). LOGIN: emailed link sends
+    # the member to the normal login page, then /my-policies -- requires a real Syncpoint account
+    # and matches how Vanta/Drata/Secureframe/Thoropass all require platform login.
+    notification-mode: ${POLICY_NOTIFICATION_MODE:MAGIC_LINK}
+    reattestation-sweep-cron: ${POLICY_REATTESTATION_SWEEP_CRON:0 0 3 * * *}
 
 management:
   endpoints:

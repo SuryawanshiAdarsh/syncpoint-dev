@@ -55,6 +55,7 @@ export function evidenceSourceLabel(code: string): string {
     AWS:              'AWS',
     JIRA:             'Jira',
     GOOGLE_WORKSPACE: 'Google Workspace',
+    POLICY:           'Policy',
   } as Record<string, string>)[code] ?? code;
 }
 

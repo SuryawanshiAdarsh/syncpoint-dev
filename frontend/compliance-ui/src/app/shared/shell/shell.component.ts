@@ -177,28 +177,37 @@ interface NavSection { title: string; items: NavItem[]; }
           </div>
         </div>
 
-        <ng-container *ngFor="let section of sections">
-          <div class="section-title">{{ section.title }}</div>
-          <a *ngFor="let item of section.items"
-             class="link"
-             [routerLink]="item.path"
-             routerLinkActive="active">
-            <mat-icon>{{ item.icon }}</mat-icon>
-            <span class="link-label">{{ item.label }}</span>
+        <ng-container *ngIf="me()?.role === 'ACKNOWLEDGER'; else fullNav">
+          <div class="section-title">{{ c.shell.sidebarSectionGovernance }}</div>
+          <a class="link" routerLink="/my-policies" routerLinkActive="active">
+            <mat-icon>task_alt</mat-icon>
+            <span class="link-label">{{ c.shell.navMyPolicies }}</span>
           </a>
         </ng-container>
+        <ng-template #fullNav>
+          <ng-container *ngFor="let section of sections">
+            <div class="section-title">{{ section.title }}</div>
+            <a *ngFor="let item of section.items"
+               class="link"
+               [routerLink]="item.path"
+               routerLinkActive="active">
+              <mat-icon>{{ item.icon }}</mat-icon>
+              <span class="link-label">{{ item.label }}</span>
+            </a>
+          </ng-container>
 
-        <ng-container *ngIf="me()?.platformAdmin">
-          <div class="section-title">{{ c.shell.sidebarSectionPlatform }}</div>
-          <a class="link" routerLink="/admin" routerLinkActive="active">
-            <mat-icon>admin_panel_settings</mat-icon>
-            <span class="link-label">{{ c.shell.navAdminConsole }}</span>
-          </a>
-        </ng-container>
+          <ng-container *ngIf="me()?.platformAdmin">
+            <div class="section-title">{{ c.shell.sidebarSectionPlatform }}</div>
+            <a class="link" routerLink="/admin" routerLinkActive="active">
+              <mat-icon>admin_panel_settings</mat-icon>
+              <span class="link-label">{{ c.shell.navAdminConsole }}</span>
+            </a>
+          </ng-container>
+        </ng-template>
 
         <div class="footer">
           <div class="status-line"><span class="dot"></span> All systems operational</div>
-          <div style="margin-top:4px;">v{{ appVersion }} · SOC 2 (DEMO)</div>
+          <div style="margin-top:4px;">v{{ appVersion }} · SOC 2</div>
         </div>
       </aside>
 
@@ -270,6 +279,9 @@ export class ShellComponent implements OnInit {
     { title: CAPTIONS.shell.sidebarSectionEvidence, items: [
         { path: '/controls',      label: CAPTIONS.shell.navControls,     icon: 'checklist' },
         { path: '/evidence',      label: CAPTIONS.shell.navEvidence,     icon: 'description' } ] },
+    { title: CAPTIONS.shell.sidebarSectionGovernance, items: [
+        { path: '/policies',      label: CAPTIONS.shell.navPolicies,     icon: 'gavel' },
+        { path: '/my-policies',   label: CAPTIONS.shell.navMyPolicies,   icon: 'task_alt' } ] },
     { title: CAPTIONS.shell.sidebarSectionAutomation, items: [
         { path: '/integrations',  label: CAPTIONS.shell.navIntegrations, icon: 'hub' },
         { path: '/activity',      label: CAPTIONS.shell.navActivity,     icon: 'history' },

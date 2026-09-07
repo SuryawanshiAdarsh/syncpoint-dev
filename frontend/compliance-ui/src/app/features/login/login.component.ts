@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -168,21 +168,6 @@ import { CAPTIONS } from '@captions';
       font-size: 12.5px;
       margin: -4px 0 8px;
     }
-    .demo-hint {
-      margin-top: 20px;
-      padding: 12px 14px;
-      background: var(--color-primary-soft);
-      border: 1px solid #c7d2fe;
-      border-radius: 10px;
-      font-size: 12.5px;
-      color: var(--color-primary-text);
-    }
-    .demo-hint strong { color: var(--color-primary-active); font-weight: 600; }
-    .demo-hint code {
-      background: rgba(99, 102, 241, 0.14);
-      padding: 1px 5px; border-radius: 4px;
-      color: var(--color-primary-active); font-size: 12px;
-    }
   `],
   template: `
     <div class="auth">
@@ -214,7 +199,7 @@ import { CAPTIONS } from '@captions';
           </div>
         </div>
 
-        <div class="foot">© {{ c.common.appName }} · SOC 2 (DEMO)</div>
+        <div class="foot">© {{ c.common.appName }} · SOC 2</div>
       </div>
 
       <div class="form-wrap">
@@ -245,11 +230,6 @@ import { CAPTIONS } from '@captions';
           <div class="foot-link">
             {{ c.auth.switchToRegister }} <a routerLink="/register">{{ c.auth.switchToRegisterAction }} →</a>
           </div>
-
-          <div class="demo-hint">
-            <strong>Demo login:</strong>
-            <code>demo-owner&#64;syncpoint.local</code> / <code>demo-password-2026</code>
-          </div>
         </div>
       </div>
     </div>
@@ -260,6 +240,7 @@ export class LoginComponent {
   private readonly api = inject(ApiService);
   private readonly store = inject(TokenStore);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   email = '';
   password = '';
@@ -272,7 +253,14 @@ export class LoginComponent {
     this.api.login({ email: this.email, password: this.password }).subscribe({
       next: (t) => {
         this.store.setTokens(t.accessToken, t.refreshToken);
-        this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+        const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
+        this.api.me().subscribe({
+          next: (me) => {
+            const target = redirectTo || (me.role === 'ACKNOWLEDGER' ? '/my-policies' : '/dashboard');
+            this.router.navigateByUrl(target, { replaceUrl: true });
+          },
+          error: () => this.router.navigateByUrl('/dashboard', { replaceUrl: true }),
+        });
       },
       error: (e) => {
         this.loading.set(false);

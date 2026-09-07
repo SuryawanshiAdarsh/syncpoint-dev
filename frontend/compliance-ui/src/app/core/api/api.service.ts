@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 import {
   Control, ControlGap, ControlMapping, AiAnalysisSummary, AuditEvent, CollectionRun, CollectionRunDetail,
   CoverageTrendPoint, DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
-  Member, Organization, TokenResponse,
+  Member, Organization, TokenResponse, Policy, PolicyDetail, PolicyPortalPage, PolicyPortalDetail, PolicyCoverage,
   AdminOrganizationSummary, AdminOrganizationDetail, UpdateSubscriptionRequest, SubscriptionResponse,
   CreateSubscriptionRequestBody, SubscriptionRequestResponse, AdminSubscriptionRequestResponse
 } from './api.types';
@@ -82,6 +82,68 @@ export class ApiService {
   }
   analyzeEvidence(evidenceId: string, body: { controlId: string }): Observable<Record<string, unknown>> {
     return this.http.post<Record<string, unknown>>(`${this.base}/evidence/${evidenceId}/analyze`, body);
+  }
+
+  // Policies
+  policies(): Observable<Policy[]> { return this.http.get<Policy[]>(`${this.base}/policies`); }
+  policy(id: string): Observable<PolicyDetail> { return this.http.get<PolicyDetail>(`${this.base}/policies/${id}`); }
+  createPolicy(form: FormData): Observable<Policy> {
+    return this.http.post<Policy>(`${this.base}/policies`, form);
+  }
+  addPolicyVersion(id: string, form: FormData): Observable<Policy> {
+    return this.http.post<Policy>(`${this.base}/policies/${id}/versions`, form);
+  }
+  acknowledgePolicy(id: string): Observable<Policy> {
+    return this.http.post<Policy>(`${this.base}/policies/${id}/acknowledge`, {});
+  }
+  updatePolicy(id: string, body: { ownerUserId?: string | null; category: string; description?: string; nextReviewDate?: string | null }): Observable<Policy> {
+    return this.http.patch<Policy>(`${this.base}/policies/${id}`, body);
+  }
+  archivePolicy(id: string): Observable<Policy> {
+    return this.http.post<Policy>(`${this.base}/policies/${id}/archive`, {});
+  }
+  remindPolicy(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/policies/${id}/remind`, {});
+  }
+  policyCoverage(): Observable<PolicyCoverage> {
+    return this.http.get<PolicyCoverage>(`${this.base}/policies/coverage`);
+  }
+  policyCategories(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.base}/policies/categories`);
+  }
+  confirmAllPolicyMappings(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/policies/${id}/mappings/confirm-all`, {});
+  }
+
+  // Login-free policy acknowledgment portal (magic-link token, no auth header needed)
+  portalPolicies(token: string, page: number, size: number): Observable<PolicyPortalPage> {
+    return this.http.get<PolicyPortalPage>(`${this.base}/policy-portal/policies`, { params: { token, page, size } });
+  }
+  portalPolicy(token: string, id: string): Observable<PolicyPortalDetail> {
+    return this.http.get<PolicyPortalDetail>(`${this.base}/policy-portal/policies/${id}`, { params: { token } });
+  }
+  portalDocumentUrl(token: string, id: string): string {
+    return `${this.base}/policy-portal/policies/${id}/document?token=${encodeURIComponent(token)}`;
+  }
+  portalAcknowledge(token: string, id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/policy-portal/policies/${id}/acknowledge`, {}, { params: { token } });
+  }
+
+  // Real-login "My Policies" (normal JWT session, restricted for ACKNOWLEDGER-role accounts server-side)
+  myPolicies(page: number, size: number): Observable<PolicyPortalPage> {
+    return this.http.get<PolicyPortalPage>(`${this.base}/my-policies`, { params: { page, size } });
+  }
+  myPolicy(id: string): Observable<PolicyPortalDetail> {
+    return this.http.get<PolicyPortalDetail>(`${this.base}/my-policies/${id}`);
+  }
+  myPolicyDocumentUrl(id: string): string {
+    return `${this.base}/my-policies/${id}/document`;
+  }
+  myPolicyDocumentBlob(id: string): Observable<Blob> {
+    return this.http.get(`${this.base}/my-policies/${id}/document`, { responseType: 'blob' });
+  }
+  acknowledgeMyPolicy(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/my-policies/${id}/acknowledge`, {});
   }
 
   // Integrations
