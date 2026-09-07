@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '@core/api/api.service';
 import { Control, ControlStatus } from '@core/api/api.types';
 import { CAPTIONS } from '@captions';
+import { controlStatusMeta, statusColorVar } from '@constants';
 import {
   UiPageHeaderComponent,
   UiCardComponent,
@@ -234,12 +235,13 @@ export class ControlsComponent implements OnInit {
 
   statusChips = computed<UiFilterChip[]>(() => {
     const list = this.all();
+    const labels = this.c.status as Record<string, string>;
     return [
-      { key: '',             label: 'All',           count: list.length },
-      { key: 'COVERED',      label: 'Covered',       count: list.filter(c => c.status === 'COVERED').length,      colorDot: '#10b981' },
-      { key: 'PARTIAL',      label: 'Partial',       count: list.filter(c => c.status === 'PARTIAL').length,      colorDot: '#f59e0b' },
-      { key: 'NEEDS_REVIEW', label: 'Needs review',  count: list.filter(c => c.status === 'NEEDS_REVIEW').length, colorDot: '#8b5cf6' },
-      { key: 'MISSING',      label: 'Missing',       count: list.filter(c => c.status === 'MISSING').length,      colorDot: '#ef4444' },
+      { key: '',             label: 'All',                        count: list.length },
+      { key: 'COVERED',      label: labels['COVERED'],             count: list.filter(c => c.status === 'COVERED').length,      colorDot: statusColorVar(controlStatusMeta('COVERED')) },
+      { key: 'PARTIAL',      label: labels['PARTIAL'],             count: list.filter(c => c.status === 'PARTIAL').length,      colorDot: statusColorVar(controlStatusMeta('PARTIAL')) },
+      { key: 'NEEDS_REVIEW', label: labels['NEEDS_REVIEW'],         count: list.filter(c => c.status === 'NEEDS_REVIEW').length, colorDot: statusColorVar(controlStatusMeta('NEEDS_REVIEW')) },
+      { key: 'MISSING',      label: labels['MISSING'],             count: list.filter(c => c.status === 'MISSING').length,      colorDot: statusColorVar(controlStatusMeta('MISSING')) },
     ];
   });
 

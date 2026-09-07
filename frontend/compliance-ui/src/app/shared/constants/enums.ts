@@ -37,8 +37,7 @@ export const EVIDENCE_SOURCE = {
   JIRA: 'JIRA',
   GOOGLE_WORKSPACE: 'GOOGLE_WORKSPACE',
   POLICY: 'POLICY',
-} as const;
-export type EvidenceSourceValue = typeof EVIDENCE_SOURCE[keyof typeof EVIDENCE_SOURCE];
+} as const;export type EvidenceSourceValue = typeof EVIDENCE_SOURCE[keyof typeof EVIDENCE_SOURCE];
 
 export const EVIDENCE_STATUS = {
   COLLECTED: 'COLLECTED',
@@ -146,3 +145,7 @@ export const AUDIT_EVENT = {
   EXPORT_CREATED: 'EXPORT_CREATED',
 } as const;
 export type AuditEventValue = typeof AUDIT_EVENT[keyof typeof AUDIT_EVENT];
+
+// ─── Review Queue triage thresholds ─────────────────────────────────
+/** Below this AI mapping confidence, evidence is flagged in the Review Queue as "Low confidence". */
+export const LOW_CONFIDENCE_THRESHOLD = 0.7;

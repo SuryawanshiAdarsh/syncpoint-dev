@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 
 import { EvidenceSourceType } from '../../core/api/api.types';
+import { evidenceSourceIcon, evidenceSourceLabel } from '../constants';
 
 /**
  * Pill showing an evidence source with a matched icon.
@@ -38,21 +39,6 @@ export class UiSourcePillComponent {
   @Input({ required: true }) set source(value: EvidenceSourceType) { this._source.set(value); }
   private readonly _source = signal<EvidenceSourceType>('MANUAL_UPLOAD');
 
-  readonly icon = computed(() => ({
-    MANUAL_UPLOAD:    'upload_file',
-    GITHUB:           'code',
-    AWS:              'cloud',
-    JIRA:             'bug_report',
-    GOOGLE_WORKSPACE: 'groups',
-    POLICY:           'gavel',
-  } as const)[this._source()]);
-
-  readonly label = computed(() => ({
-    MANUAL_UPLOAD:    'Manual upload',
-    GITHUB:           'GitHub',
-    AWS:              'AWS',
-    JIRA:             'Jira',
-    GOOGLE_WORKSPACE: 'Google Workspace',
-    POLICY:           'Policy',
-  } as const)[this._source()]);
+  readonly icon = computed(() => evidenceSourceIcon(this._source()));
+  readonly label = computed(() => evidenceSourceLabel(this._source()));
 }

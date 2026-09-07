@@ -7,6 +7,13 @@
 -- controls with a realistic mix of states:
 --   * demo-owner@syncpoint.local     (password: demo-password-2026, role: OWNER, platform admin)
 --   * demo-reviewer@syncpoint.local  (password: demo-password-2026, role: REVIEWER)
+--   * demo-acknowledger@syncpoint.local (password: demo-password-2026, role: ACKNOWLEDGER —
+--     restricted role that can only view/acknowledge My Policies, nothing else)
+--   * 4 policies covering the realistic mix: one fully mapped + acknowledged by the
+--     acknowledger but still pending owner/reviewer, one with a mix of confirmed and
+--     still-AI-suggested control mappings and zero acknowledgments, one freshly
+--     published with no mappings or acknowledgments yet (a real gap), and one archived
+--     policy that was fully acknowledged before being superseded
 --   * 12 hand-authored evidence artifacts driving the exact coverage story below,
 --     plus ~48 additional bulk evidence artifacts (mostly unmapped/backlog, some
 --     expiring/expired, some AI-suggested) so Evidence/Review Queue have enough
@@ -46,7 +53,7 @@ BEGIN;
 DELETE FROM organization_members
  WHERE user_id IN (
     SELECT id FROM users WHERE email IN
-        ('demo-owner@syncpoint.local', 'demo-reviewer@syncpoint.local')
+        ('demo-owner@syncpoint.local', 'demo-reviewer@syncpoint.local', 'demo-acknowledger@syncpoint.local')
  );
 
 DELETE FROM organizations WHERE slug LIKE 'demo-corp%';
@@ -61,7 +68,7 @@ DELETE FROM organizations WHERE slug LIKE 'demo-cust-%';
 DELETE FROM users WHERE email LIKE '%@democustomer.example';
 
 DELETE FROM users
- WHERE email IN ('demo-owner@syncpoint.local', 'demo-reviewer@syncpoint.local');
+ WHERE email IN ('demo-owner@syncpoint.local', 'demo-reviewer@syncpoint.local', 'demo-acknowledger@syncpoint.local');
 
 -- -----------------------------------------------------------------------------
 -- 1. Core tenant entities. Fixed UUIDs keep the seed reproducible.
@@ -78,13 +85,19 @@ INSERT INTO users (id, email, password_hash, name, platform_admin) VALUES
     ('00000000-0000-4000-a000-000000000011',
      'demo-reviewer@syncpoint.local',
      '$2a$12$NBZlfZ0TfiWsIVx1zb/D4.XdB.dtl5KSgjLxE9fp6otJs7kYTjbju',
-     'Demo Reviewer', FALSE);
+     'Demo Reviewer', FALSE),
+    ('00000000-0000-4000-a000-000000000012',
+     'demo-acknowledger@syncpoint.local',
+     '$2a$12$Lz86VSKdF6K7P4qd3LuQbOWudQKOsr6skAS5k2kExB4x3z8hdME6C',
+     'Demo Acknowledger', FALSE);
 
 INSERT INTO organization_members (organization_id, user_id, role) VALUES
     ('00000000-0000-4000-a000-000000000001',
      '00000000-0000-4000-a000-000000000010', 'OWNER'),
     ('00000000-0000-4000-a000-000000000001',
-     '00000000-0000-4000-a000-000000000011', 'REVIEWER');
+     '00000000-0000-4000-a000-000000000011', 'REVIEWER'),
+    ('00000000-0000-4000-a000-000000000001',
+     '00000000-0000-4000-a000-000000000012', 'ACKNOWLEDGER');
 
 -- Platform-admin console: give the demo tenant a real-looking paid subscription so the admin
 -- console list isn't just a wall of fresh trials (V19's backfill row is cascade-deleted above
@@ -839,6 +852,166 @@ SELECT org_id, owner_user_id, 'ENTERPRISE', 40, 'Want enterprise features while 
        'REJECTED', '00000000-0000-4000-a000-000000000010'::uuid, NOW() - INTERVAL '10 days',
        'Please bring your account current before upgrading.'
 FROM tmp_new_orgs WHERE org_name = 'Ember Robotics Labs';
+
+-- -----------------------------------------------------------------------------
+-- 9. Policies — 4 policies covering the realistic mix of states the Policies
+--    feature needs to demo: each publish mirrors the document into the same
+--    `evidence` table used everywhere else (sourceType='POLICY'), so control
+--    mapping/coverage reuses the existing evidence machinery unchanged.
+-- -----------------------------------------------------------------------------
+
+-- 9a. The mirrored evidence document for each policy.
+INSERT INTO evidence (id, organization_id, name, description, source_type,
+                      source_system, status, collected_at, expires_at, created_by)
+VALUES
+    ('00000000-0000-4000-a000-000000001200', '00000000-0000-4000-a000-000000000001',
+     'Access Control Policy', 'Defines least-privilege access provisioning, periodic access review, and MFA requirements for all production systems.',
+     'POLICY', 'policy', 'APPROVED',
+     NOW() - INTERVAL '20 days', NOW() + INTERVAL '345 days', '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001201', '00000000-0000-4000-a000-000000000001',
+     'Incident Response Policy', 'Defines detection, escalation, containment, and post-incident review steps for security incidents.',
+     'POLICY', 'policy', 'UNDER_REVIEW',
+     NOW() - INTERVAL '5 days', NOW() + INTERVAL '360 days', '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001202', '00000000-0000-4000-a000-000000000001',
+     'Information Security Policy', 'Top-level information security policy covering roles, responsibilities, and the overall security program.',
+     'POLICY', 'policy', 'COLLECTED',
+     NOW() - INTERVAL '1 days', NOW() + INTERVAL '364 days', '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001203', '00000000-0000-4000-a000-000000000001',
+     'Data Retention & Disposal Policy', 'Defines retention periods and secure disposal procedures for customer and business data. Superseded by the 2026 revision; retained for historical record.',
+     'POLICY', 'policy', 'APPROVED',
+     NOW() - INTERVAL '200 days', NOW() + INTERVAL '165 days', '00000000-0000-4000-a000-000000000010');
+
+INSERT INTO evidence_versions (id, evidence_id, organization_id, version,
+                               storage_key, content_hash, size_bytes,
+                               mime_type, collector_version, collected_at)
+VALUES
+    ('00000000-0000-4000-a000-000000001210', '00000000-0000-4000-a000-000000001200',
+     '00000000-0000-4000-a000-000000000001', 1,
+     'organizations/00000000-0000-4000-a000-000000000001/evidence/00000000-0000-4000-a000-000000001200/00000000-0000-4000-a000-000000001210',
+     'demo-seed-hash-1200000000000000000000000000000000000000000000000000000',
+     1200, 'application/pdf', 'manual/1', NOW() - INTERVAL '20 days'),
+    ('00000000-0000-4000-a000-000000001211', '00000000-0000-4000-a000-000000001201',
+     '00000000-0000-4000-a000-000000000001', 1,
+     'organizations/00000000-0000-4000-a000-000000000001/evidence/00000000-0000-4000-a000-000000001201/00000000-0000-4000-a000-000000001211',
+     'demo-seed-hash-1201000000000000000000000000000000000000000000000000000',
+     1024, 'application/pdf', 'manual/1', NOW() - INTERVAL '5 days'),
+    ('00000000-0000-4000-a000-000000001212', '00000000-0000-4000-a000-000000001202',
+     '00000000-0000-4000-a000-000000000001', 1,
+     'organizations/00000000-0000-4000-a000-000000000001/evidence/00000000-0000-4000-a000-000000001202/00000000-0000-4000-a000-000000001212',
+     'demo-seed-hash-1202000000000000000000000000000000000000000000000000000',
+     1536, 'application/pdf', 'manual/1', NOW() - INTERVAL '1 days'),
+    ('00000000-0000-4000-a000-000000001213', '00000000-0000-4000-a000-000000001203',
+     '00000000-0000-4000-a000-000000000001', 1,
+     'organizations/00000000-0000-4000-a000-000000000001/evidence/00000000-0000-4000-a000-000000001203/00000000-0000-4000-a000-000000001213',
+     'demo-seed-hash-1203000000000000000000000000000000000000000000000000000',
+     896, 'application/pdf', 'manual/1', NOW() - INTERVAL '200 days');
+
+-- 9b. Control mappings — Access Control Policy manually mapped + confirmed (matches the
+--     "Add control" flow); Incident Response Policy shows the auto-suggested-on-publish
+--     flow with 2 of 4 suggestions confirmed and 2 still pending; Information Security
+--     and the archived Data Retention policy are deliberately left unmapped.
+INSERT INTO evidence_control_mappings (id, organization_id, evidence_id,
+                                       control_id, mapping_type, classification,
+                                       confidence, reason, created_by)
+SELECT m.id, m.organization_id, m.evidence_id, c.id, m.mapping_type, m.classification,
+       m.confidence, m.reason, m.created_by
+FROM (VALUES
+    ('00000000-0000-4000-a000-000000001230'::uuid, '00000000-0000-4000-a000-000000000001'::uuid,
+     '00000000-0000-4000-a000-000000001200'::uuid, 'CC1.1',
+     'HUMAN_CONFIRMED', 'COVERED', NULL::numeric,
+     'Manually mapped from policy detail.',
+     '00000000-0000-4000-a000-000000000010'::uuid),
+    ('00000000-0000-4000-a000-000000001231'::uuid, '00000000-0000-4000-a000-000000000001'::uuid,
+     '00000000-0000-4000-a000-000000001201'::uuid, 'CC5.3',
+     'HUMAN_CONFIRMED', 'COVERED', NULL::numeric,
+     'Suggested based on policy type \u2014 review and confirm.',
+     '00000000-0000-4000-a000-000000000010'::uuid),
+    ('00000000-0000-4000-a000-000000001232'::uuid, '00000000-0000-4000-a000-000000000001'::uuid,
+     '00000000-0000-4000-a000-000000001201'::uuid, 'CC7.3',
+     'HUMAN_CONFIRMED', 'COVERED', NULL::numeric,
+     'Suggested based on policy type \u2014 review and confirm.',
+     '00000000-0000-4000-a000-000000000010'::uuid),
+    ('00000000-0000-4000-a000-000000001233'::uuid, '00000000-0000-4000-a000-000000000001'::uuid,
+     '00000000-0000-4000-a000-000000001201'::uuid, 'CC7.4',
+     'AI_SUGGESTED', 'COVERED', NULL::numeric,
+     'Suggested based on policy type \u2014 review and confirm.',
+     '00000000-0000-4000-a000-000000000010'::uuid),
+    ('00000000-0000-4000-a000-000000001234'::uuid, '00000000-0000-4000-a000-000000000001'::uuid,
+     '00000000-0000-4000-a000-000000001201'::uuid, 'CC7.5',
+     'AI_SUGGESTED', 'COVERED', NULL::numeric,
+     'Suggested based on policy type \u2014 review and confirm.',
+     '00000000-0000-4000-a000-000000000010'::uuid)
+) AS m(id, organization_id, evidence_id, control_code, mapping_type, classification,
+       confidence, reason, created_by)
+JOIN controls c ON c.code = m.control_code;
+
+-- 9c. The policies themselves, each pointing at its mirrored evidence above.
+INSERT INTO policies (id, organization_id, title, category, description, status,
+                      owner_user_id, next_review_date, evidence_id, current_version,
+                      attestation_cycle, cycle_started_at, created_by)
+VALUES
+    ('00000000-0000-4000-a000-000000001220', '00000000-0000-4000-a000-000000000001',
+     'Access Control Policy', 'Access Control',
+     'Defines least-privilege access provisioning, periodic access review, and MFA requirements for all production systems.',
+     'PUBLISHED', '00000000-0000-4000-a000-000000000010', (NOW() + INTERVAL '340 days')::date,
+     '00000000-0000-4000-a000-000000001200', 1, 1, NOW() - INTERVAL '20 days',
+     '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001221', '00000000-0000-4000-a000-000000000001',
+     'Incident Response Policy', 'Incident Response',
+     'Defines detection, escalation, containment, and post-incident review steps for security incidents.',
+     'PUBLISHED', '00000000-0000-4000-a000-000000000011', (NOW() + INTERVAL '300 days')::date,
+     '00000000-0000-4000-a000-000000001201', 1, 1, NOW() - INTERVAL '5 days',
+     '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001222', '00000000-0000-4000-a000-000000000001',
+     'Information Security Policy', 'Information Security',
+     'Top-level information security policy covering roles, responsibilities, and the overall security program.',
+     'PUBLISHED', NULL, NULL,
+     '00000000-0000-4000-a000-000000001202', 1, 1, NOW() - INTERVAL '1 days',
+     '00000000-0000-4000-a000-000000000010'),
+    ('00000000-0000-4000-a000-000000001223', '00000000-0000-4000-a000-000000000001',
+     'Data Retention & Disposal Policy', 'Data Retention & Disposal',
+     'Defines retention periods and secure disposal procedures for customer and business data. Superseded by the 2026 revision; retained for historical record.',
+     'ARCHIVED', '00000000-0000-4000-a000-000000000010', (NOW() - INTERVAL '10 days')::date,
+     '00000000-0000-4000-a000-000000001203', 1, 1, NOW() - INTERVAL '200 days',
+     '00000000-0000-4000-a000-000000000010');
+
+-- 9d. Acknowledgments — only the Access Control Policy (by the acknowledger, not yet by
+--     owner/reviewer) and the archived Data Retention policy (fully acknowledged before
+--     being superseded) have any; Incident Response and Information Security are
+--     deliberately left with zero acknowledgments to show the pending state.
+INSERT INTO policy_acknowledgments (id, organization_id, policy_id, policy_version,
+                                    user_id, acknowledged_at, attestation_cycle)
+VALUES
+    ('00000000-0000-4000-a000-000000001240', '00000000-0000-4000-a000-000000000001',
+     '00000000-0000-4000-a000-000000001220', 1, '00000000-0000-4000-a000-000000000012',
+     NOW() - INTERVAL '18 days', 1),
+    ('00000000-0000-4000-a000-000000001241', '00000000-0000-4000-a000-000000000001',
+     '00000000-0000-4000-a000-000000001223', 1, '00000000-0000-4000-a000-000000000010',
+     NOW() - INTERVAL '195 days', 1),
+    ('00000000-0000-4000-a000-000000001242', '00000000-0000-4000-a000-000000000001',
+     '00000000-0000-4000-a000-000000001223', 1, '00000000-0000-4000-a000-000000000011',
+     NOW() - INTERVAL '194 days', 1),
+    ('00000000-0000-4000-a000-000000001243', '00000000-0000-4000-a000-000000000001',
+     '00000000-0000-4000-a000-000000001223', 1, '00000000-0000-4000-a000-000000000012',
+     NOW() - INTERVAL '193 days', 1);
+
+-- 9e. Audit trail for the policy lifecycle above.
+INSERT INTO audit_events (organization_id, actor_user_id, event_type,
+                          entity_type, entity_id, metadata) VALUES
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'USER_CREATED', 'user', '00000000-0000-4000-a000-000000000012', '{"seed":true,"role":"ACKNOWLEDGER"}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'POLICY_CREATED', 'policy', '00000000-0000-4000-a000-000000001220', '{"seed":true,"title":"Access Control Policy"}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'POLICY_CREATED', 'policy', '00000000-0000-4000-a000-000000001221', '{"seed":true,"title":"Incident Response Policy"}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'POLICY_CREATED', 'policy', '00000000-0000-4000-a000-000000001222', '{"seed":true,"title":"Information Security Policy"}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'POLICY_CREATED', 'policy', '00000000-0000-4000-a000-000000001223', '{"seed":true,"title":"Data Retention & Disposal Policy"}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000012',
+     'POLICY_ACKNOWLEDGED', 'policy', '00000000-0000-4000-a000-000000001220', '{"seed":true}'),
+    ('00000000-0000-4000-a000-000000000001', '00000000-0000-4000-a000-000000000010',
+     'POLICY_ARCHIVED', 'policy', '00000000-0000-4000-a000-000000001223', '{"seed":true}');
 
 COMMIT;
 

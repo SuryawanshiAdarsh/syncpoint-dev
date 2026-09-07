@@ -163,6 +163,12 @@ public class PolicyService {
         return categoryRepo.findAllByOrderBySortOrderAsc().stream().map(PolicyCategory::getName).toList();
     }
 
+    /** Snaps a typed category to the lookup table's canonical casing (e.g. "access control" -> "Access Control") so coverage/category rollups don't fragment on case alone. Custom categories with no match pass through untouched. */
+    private String normalizeCategory(String category) {
+        String trimmed = category.trim();
+        return categoryRepo.findByNameIgnoreCase(trimmed).map(PolicyCategory::getName).orElse(trimmed);
+    }
+
     @Transactional
     public PolicyResponse create(String title, String category, String description, MultipartFile file) {
         TenantContext.Principal actor = TenantContext.require();
@@ -172,14 +178,15 @@ public class PolicyService {
         if (category == null || category.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Category is required");
         }
+        String normalizedCategory = normalizeCategory(category);
         EvidenceResponse evidence = evidenceService.upload(title, description, file, EvidenceSourceType.POLICY, "policy");
 
-        Policy policy = policyRepo.save(new Policy(actor.organizationId(), title.trim(), category, description,
+        Policy policy = policyRepo.save(new Policy(actor.organizationId(), title.trim(), normalizedCategory, description,
                 evidence.id(), actor.userId()));
         applySuggestedMappings(policy, evidence.id());
 
         audit.record(actor.organizationId(), actor.userId(), AuditEvents.POLICY_CREATED, "policy", policy.getId(),
-                Map.of("title", policy.getTitle(), "category", category));
+                Map.of("title", policy.getTitle(), "category", normalizedCategory));
         notifyPendingMembers(policy);
 
         return toResponse(policy, List.of(), List.of(), Map.of(), Map.of(), memberCount(actor.organizationId()), actor.userId());
@@ -317,7 +324,7 @@ public class PolicyService {
     public PolicyResponse update(UUID id, UpdatePolicyRequest req) {
         TenantContext.Principal actor = TenantContext.require();
         Policy p = requireOwned(id);
-        p.setCategory(req.category());
+        p.setCategory(normalizeCategory(req.category()));
         p.setDescription(req.description());
         p.setOwnerUserId(req.ownerUserId());
         p.setNextReviewDate(req.nextReviewDate());

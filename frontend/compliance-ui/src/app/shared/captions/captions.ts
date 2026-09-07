@@ -649,6 +649,7 @@ export const CAPTIONS = {
     // Evidence statuses
     PENDING: 'Pending',
     COLLECTED: 'Collected',
+    UNDER_REVIEW: 'Under review',
     APPROVED: 'Approved',
     REJECTED: 'Rejected',
     // Integration statuses

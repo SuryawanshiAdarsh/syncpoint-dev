@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../core/api/api.service';
 import { Evidence } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
+import { LOW_CONFIDENCE_THRESHOLD } from '@constants';
 import {
   UiPageHeaderComponent,
   UiCardComponent,
@@ -20,7 +21,6 @@ type QueueReason = 'EXPIRED' | 'UNMAPPED' | 'EXPIRING' | 'LOW_CONFIDENCE';
 const REASON_RANK: Record<QueueReason, number> = {
   EXPIRED: 0, UNMAPPED: 1, EXPIRING: 2, LOW_CONFIDENCE: 3,
 };
-const LOW_CONFIDENCE_THRESHOLD = 0.7;
 
 interface QueueItem {
   evidence: Evidence;

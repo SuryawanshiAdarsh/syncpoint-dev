@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 
 import { UiBadgeComponent, UiBadgeVariant } from './ui-badge.component';
 import { ControlStatus, EvidenceStatus } from '../../core/api/api.types';
+import { CAPTIONS } from '../captions';
+
+const STATUS_LABELS = CAPTIONS.status as Readonly<Record<string, string>>;
 
 /**
  * Specialized badge for control readiness state.
@@ -28,14 +31,7 @@ export class UiControlStatusBadgeComponent {
     } as const)[this._status()];
   });
 
-  readonly label = computed(() => {
-    return ({
-      COVERED: 'Covered',
-      PARTIAL: 'Partial',
-      MISSING: 'Missing',
-      NEEDS_REVIEW: 'Needs review',
-    } as const)[this._status()];
-  });
+  readonly label = computed(() => STATUS_LABELS[this._status()] ?? this._status());
 }
 
 /**
@@ -62,15 +58,7 @@ export class UiEvidenceStatusBadgeComponent {
     } as const)[this._status()];
   });
 
-  readonly label = computed(() => {
-    return ({
-      COLLECTED:    'Collected',
-      UNDER_REVIEW: 'Under review',
-      APPROVED:     'Approved',
-      REJECTED:     'Rejected',
-      EXPIRED:      'Expired',
-    } as const)[this._status()];
-  });
+  readonly label = computed(() => STATUS_LABELS[this._status()] ?? this._status());
 }
 
 /**
@@ -92,7 +80,5 @@ export class UiFreshnessBadgeComponent {
     return ({ CURRENT: 'covered', EXPIRING: 'partial', EXPIRED: 'missing' } as const)[this._value()];
   });
 
-  readonly label = computed(() => {
-    return ({ CURRENT: 'Current', EXPIRING: 'Expiring', EXPIRED: 'Expired' } as const)[this._value()];
-  });
+  readonly label = computed(() => STATUS_LABELS[this._value()] ?? this._value());
 }
