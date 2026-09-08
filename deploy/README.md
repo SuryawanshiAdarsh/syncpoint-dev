@@ -1,37 +1,31 @@
-# Syncpoint Compliance — Deploy from source
+# Syncpoint Compliance — Deploy from Docker Hub
 
-> **Docker Hub images have been taken down** (the `adarshs1612/syncpoint-*` repos
-> were public and are no longer published). This repo's source is now the only
-> way to run Syncpoint — `docker-compose.hub.yml` builds all three application
-> images locally instead of pulling them.
+Pre-built images for all three application services are published to Docker
+Hub under `adarshs1612/syncpoint-*`. Anyone with Docker installed can pull and
+run the full 7-service stack with just two files — no source clone, no build.
 
-Anyone with Docker installed and a clone of this repository can build and run
-the full 7-service stack in one command.
+## Images (pulled, not built)
 
-## Images (built locally, not pulled)
+- `adarshs1612/syncpoint-backend:0.8.0`
+- `adarshs1612/syncpoint-ai-service:0.8.0`
+- `adarshs1612/syncpoint-frontend:0.8.0`
 
-- `syncpoint-backend` — built from `backend/compliance-api`
-- `syncpoint-ai-service` — built from `ai-service`
-- `syncpoint-frontend` — built from `frontend/compliance-ui`
-
-Plus stock images pulled from Docker Hub (these are third-party base images,
-not Syncpoint's own): `postgres:16-alpine`, `redis:7-alpine`,
+Plus stock images pulled from Docker Hub (third-party base images, not
+Syncpoint's own): `postgres:16-alpine`, `redis:7-alpine`,
 `qdrant/qdrant:latest`, `minio/minio:latest`, `minio/mc:latest`, `axllent/mailpit:latest`.
 
 ## Quickstart (recipient side)
 
-Only requires **Docker Desktop 24+** or **Docker Engine 24+** with Compose v2,
-plus a clone of this repository (the build needs the source, not just the
-compose file).
+Only requires **Docker Desktop 24+** or **Docker Engine 24+** with Compose v2
+— no git clone needed, just the two files in this folder
+(`docker-compose.hub.yml` and `.env.example`).
 
 ```bash
-# 1. Clone and configure
-git clone https://github.com/SuryawanshiAdarsh/syncpoint-dev.git
-cd syncpoint-dev/deploy
+# 1. Configure
 cp .env.example .env
 
-# 2. Build and start everything (first build takes a few minutes)
-docker compose -f docker-compose.hub.yml up -d --build
+# 2. Pull and start everything
+docker compose -f docker-compose.hub.yml up -d
 
 # 3. Wait ~30s for backend healthcheck to go green
 docker compose -f docker-compose.hub.yml ps
@@ -57,25 +51,31 @@ The stack above starts with an empty database — a recipient can register their
 own organization and start from zero, or you can hand them the same fully
 populated demo data used for screenshots/walkthroughs (15 customer orgs, 60
 evidence artifacts, 4 integrations, ~48 collection runs, ~220 audit events,
-renewal requests, etc. — see `database/seed/demo.sql`'s header comment for the
-full list).
+renewal requests, a Type II compliance program with a full system description,
+9 control owners, 8 risk-register entries, and 4 control exceptions, etc. —
+see `database/seed/demo.sql`'s header comment for the full list).
 
 1. Also share `database/seed/demo.sql` alongside the two files above.
 2. Start the stack and wait for it to be healthy (step 2-3 in Quickstart).
-3. Load the seed:
+3. Load the seed — copy the file into the Postgres container and run it with
+   `psql -f`, rather than piping through stdin. This avoids a real, previously
+   -hit bug where PowerShell's default stdin encoding silently corrupts
+   em-dashes and other non-ASCII characters in the seed's text (Windows and
+   macOS/Linux both use the same commands below, only the container name
+   differs if you changed it):
 
    ```bash
-   # macOS/Linux
-   docker compose -f docker-compose.hub.yml exec -T postgres \
-       psql -U compliance -d compliance -v ON_ERROR_STOP=1 < demo.sql
+   docker compose -f docker-compose.hub.yml cp demo.sql postgres:/tmp/demo.sql
+   docker compose -f docker-compose.hub.yml exec postgres \
+       psql -U compliance -d compliance -v ON_ERROR_STOP=1 -f /tmp/demo.sql
    ```
 
    ```powershell
-   # Windows PowerShell — plain `<` redirection does not work; pipe the file
-   # in with an explicit UTF-8 read, otherwise em-dashes and other non-ASCII
-   # characters get silently corrupted by PowerShell's default codepage.
-   Get-Content demo.sql -Raw -Encoding UTF8 | docker compose -f docker-compose.hub.yml exec -T postgres `
-       psql -U compliance -d compliance -v ON_ERROR_STOP=1
+   # Windows PowerShell — identical commands, no `-Encoding`/redirection
+   # workarounds needed since the file is copied as raw bytes, not piped.
+   docker compose -f docker-compose.hub.yml cp demo.sql postgres:/tmp/demo.sql
+   docker compose -f docker-compose.hub.yml exec postgres `
+       psql -U compliance -d compliance -v ON_ERROR_STOP=1 -f /tmp/demo.sql
    ```
 
 4. Restart the backend once so it records today's real coverage-trend data
