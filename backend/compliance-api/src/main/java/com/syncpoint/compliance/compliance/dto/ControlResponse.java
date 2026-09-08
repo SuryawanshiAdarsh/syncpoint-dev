@@ -10,6 +10,8 @@ public record ControlResponse(
         String title,
         String description,
         String category,
-        ControlStatus status
+        ControlStatus status,
+        UUID ownerUserId,
+        String ownerName
 ) {
 }

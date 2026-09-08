@@ -17,6 +17,7 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 | [BUG-008](#bug-008-no-bulk-actions-for-mappingevidence-review) | Parked |
 | [BUG-009](#bug-009-password-reset-does-not-revoke-existing-refresh-tokenssessions) | Parked |
 | [BUG-010](#bug-010-no-check-against-known-breached-passwords) | Parked |
+| [BUG-011](#bug-011-anonymous-requests-passed-authorization-on-nearly-every-endpoint) | Fixed (2026-09-08) |
 
 ---
 
@@ -287,4 +288,50 @@ Length + the rest of the reset/invite/verify hardening already shipped this pass
 higher-priority gaps; this is an additional layer, not a missing core capability. Revisit alongside
 any broader password-policy work (rotation, complexity rules) if a customer's security review
 requires it.
+
+---
+
+## BUG-011: Anonymous requests passed authorization on nearly every endpoint
+
+- **Severity**: P0 — critical, real broken access control (OWASP A01:2021), not theoretical
+- **Area**: Backend — `SecurityConfig.filterChain()`
+- **Found**: 2026-09-08, while live-verifying the new Readiness Report endpoint. A plain
+  unauthenticated `fetch()` (no bearer token) against it returned `500 INTERNAL_ERROR` instead of
+  `401` — the request was reaching the controller/service layer at all, which it never should.
+
+### Symptom
+Any unauthenticated request to almost any `/api/v1/**` endpoint (every one *not* already gated by
+an explicit method-level `@PreAuthorize`) reached business logic instead of being rejected at the
+security filter chain. Confirmed on both the brand-new Readiness Report endpoint and a
+pre-existing one (`GET /api/v1/controls`) — this was not new-code-specific, it was systemic.
+
+### Root cause
+The class-level authorization rule was:
+```java
+.requestMatchers("/api/v1/**")
+    .access(AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("ACKNOWLEDGER")))
+```
+This reads as "permit anyone who does not have the ACKNOWLEDGER role" — but an **anonymous**
+principal doesn't have the `ACKNOWLEDGER` role either (it has none), so `not(hasRole(ACKNOWLEDGER))`
+evaluates `true` for anonymous requests too. The rule never actually required authentication; it
+only ever excluded one specific authenticated role. Endpoints with their own `@PreAuthorize` were
+unaffected (method security still correctly rejected anonymous/wrong-role callers there) — the gap
+was specifically every endpoint relying on the class-level rule alone.
+
+### Fix applied (2026-09-08)
+```java
+.requestMatchers("/api/v1/**")
+    .access(AuthorizationManagers.allOf(
+            AuthenticatedAuthorizationManager.authenticated(),
+            AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("ACKNOWLEDGER"))))
+```
+Now requires authentication **and** not-ACKNOWLEDGER. Verified: anonymous requests to both
+`/api/v1/controls` and `/api/v1/readiness-report/download` now correctly return `401`; authenticated
+requests continue to work unchanged (re-verified Controls page load and Readiness Report download
+end-to-end after the fix).
+
+### Why not caught sooner
+No test exercises an unauthenticated request against a real `@PreAuthorize`-free endpoint; the
+Angular app always attaches a bearer token via its HTTP interceptor, so the bug was invisible from
+normal UI usage. Only surfaced via a deliberate anonymous `fetch()` during manual verification.
 

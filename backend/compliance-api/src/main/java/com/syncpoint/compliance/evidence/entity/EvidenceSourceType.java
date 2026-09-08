@@ -7,5 +7,6 @@ public enum EvidenceSourceType {
     AWS,
     JIRA,
     GOOGLE_WORKSPACE,
-    POLICY
+    POLICY,
+    SYSTEM_DESCRIPTION
 }

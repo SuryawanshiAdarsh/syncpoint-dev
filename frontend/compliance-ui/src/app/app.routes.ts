@@ -48,6 +48,8 @@ export const routes: Routes = [
       { path: 'evidence',     loadComponent: () => import('./features/evidence/evidence.component').then(m => m.EvidenceComponent) },
       { path: 'policies',     loadComponent: () => import('./features/policies/policies.component').then(m => m.PoliciesComponent) },
       { path: 'policies/:id', loadComponent: () => import('./features/policies/policy-detail.component').then(m => m.PolicyDetailComponent) },
+      { path: 'risk-register', loadComponent: () => import('./features/risk-register/risk-register.component').then(m => m.RiskRegisterComponent) },
+      { path: 'risk-register/:id', loadComponent: () => import('./features/risk-register/risk-detail.component').then(m => m.RiskDetailComponent) },
       { path: 'integrations', loadComponent: () => import('./features/integrations/integrations.component').then(m => m.IntegrationsComponent) },
       { path: 'activity',     loadComponent: () => import('./features/activity/activity.component').then(m => m.ActivityComponent) },
       { path: 'onboarding',   loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },

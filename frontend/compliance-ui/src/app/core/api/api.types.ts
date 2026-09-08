@@ -38,9 +38,11 @@ export interface Control {
   description: string;
   category: string;
   status: ControlStatus;
+  ownerUserId?: string;
+  ownerName?: string;
 }
 
-export type EvidenceSourceType = 'MANUAL_UPLOAD' | 'GITHUB' | 'AWS' | 'JIRA' | 'GOOGLE_WORKSPACE' | 'POLICY';
+export type EvidenceSourceType = 'MANUAL_UPLOAD' | 'GITHUB' | 'AWS' | 'JIRA' | 'GOOGLE_WORKSPACE' | 'POLICY' | 'SYSTEM_DESCRIPTION';
 export type EvidenceStatus = 'COLLECTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 export type FreshnessState = 'CURRENT' | 'EXPIRING' | 'EXPIRED';
 
@@ -295,6 +297,9 @@ export interface Integration {
   createdAt: string;
 }
 
+export type ReportType = 'TYPE_I' | 'TYPE_II';
+export type TscCategory = 'SECURITY' | 'AVAILABILITY' | 'CONFIDENTIALITY' | 'PROCESSING_INTEGRITY' | 'PRIVACY';
+
 export interface Organization {
   id: string;
   name: string;
@@ -302,6 +307,17 @@ export interface Organization {
   createdAt: string;
   onboardingCompleted: boolean;
   onboardingCompletedAt?: string;
+  tscScope: TscCategory[];
+  reportType: ReportType;
+  observationPeriodStart?: string;
+  observationPeriodEnd?: string;
+  targetReportDate?: string;
+  servicesProvided?: string;
+  systemBoundaries?: string;
+  componentsDescription?: string;
+  subserviceOrganizations?: string;
+  complementaryUserEntityControls?: string;
+  significantChangesDuringPeriod?: string;
 }
 
 export interface Member {
@@ -311,6 +327,60 @@ export interface Member {
   name: string;
   role: Role;
   createdAt: string;
+}
+
+export type RiskCategory = 'FRAUD' | 'OPERATIONAL' | 'TECHNOLOGY' | 'COMPLIANCE' | 'THIRD_PARTY' | 'FINANCIAL';
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type RiskStatus = 'IDENTIFIED' | 'MITIGATING' | 'MITIGATED' | 'ACCEPTED';
+
+export interface Risk {
+  id: string;
+  title: string;
+  description?: string;
+  category: RiskCategory;
+  likelihood: RiskLevel;
+  impact: RiskLevel;
+  score: number;
+  status: RiskStatus;
+  ownerUserId?: string;
+  ownerName?: string;
+  nextReviewDate?: string;
+  linkedControlIds: string[];
+  linkedControlCodes: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRiskRequest {
+  title: string;
+  description?: string;
+  category: RiskCategory;
+  likelihood: RiskLevel;
+  impact: RiskLevel;
+  ownerUserId?: string | null;
+  nextReviewDate?: string | null;
+  controlIds: string[];
+}
+
+export interface UpdateRiskRequest extends CreateRiskRequest {}
+
+export type ControlExceptionStatus = 'OPEN' | 'REMEDIATED';
+
+export interface ControlException {
+  id: string;
+  controlId: string;
+  controlCode?: string;
+  description: string;
+  detectedDate: string;
+  remediatedDate?: string;
+  status: ControlExceptionStatus;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface CreateControlExceptionRequest {
+  description: string;
+  detectedDate: string;
 }
 
 export interface DashboardSummary {

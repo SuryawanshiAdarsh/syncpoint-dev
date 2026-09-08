@@ -1,13 +1,17 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
 import { CAPTIONS } from '@captions';
 import { MAPPING_TYPE } from '@constants';
-import { ControlMapping, AiAnalysisSummary, MappingType, Control } from '../../core/api/api.types';
+import { ControlMapping, AiAnalysisSummary, MappingType, Control, Member, ControlException } from '../../core/api/api.types';
 import {
   UiCardComponent,
   UiEmptyStateComponent,
@@ -22,7 +26,7 @@ import {
   standalone: true,
   selector: 'app-control-detail',
   imports: [
-    CommonModule, RouterLink, MatButtonModule, MatIconModule,
+    CommonModule, RouterLink, FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule,
     UiCardComponent, UiEmptyStateComponent, UiControlStatusBadgeComponent,
     UiEvidenceStatusBadgeComponent, UiSourcePillComponent, UiBadgeComponent,
   ],
@@ -109,6 +113,16 @@ import {
     }
     .toast.error { background: var(--color-danger-soft); border-color: var(--color-danger-border); color: var(--color-danger-text); }
     .toast mat-icon { font-size: 18px; height: 18px; width: 18px; }
+
+    .exception-row {
+      display: flex; align-items: flex-start; gap: 12px; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--color-divider);
+    }
+    .exception-row:last-child { border-bottom: none; }
+    .exception-row .desc { font-size: 13.5px; }
+    .exception-row .dates { color: var(--color-text-muted); font-size: 12px; margin-top: 3px; }
+    .exception-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; padding: 16px 24px; border-bottom: 1px solid var(--color-divider); }
+    .exception-form mat-form-field.desc-field { flex: 1 1 320px; }
   `],
   template: `
     <div class="page">
@@ -141,6 +155,15 @@ import {
             <div class="item">
               <div class="label">Needs review</div>
               <div class="val">{{ needsReviewCount() }}</div>
+            </div>
+            <div class="item">
+              <div class="label">{{ c.controlDetail.ownerLabel }}</div>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:200px;">
+                <mat-select [ngModel]="ctrl.ownerUserId ?? null" (ngModelChange)="assignOwner($event)">
+                  <mat-option [value]="null">{{ c.controlDetail.ownerPlaceholder }}</mat-option>
+                  <mat-option *ngFor="let m of members()" [value]="m.userId">{{ m.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
             </div>
           </div>
         </div>
@@ -223,6 +246,54 @@ import {
             </ui-empty-state>
           </ng-template>
         </ui-card>
+
+        <ui-card
+          [title]="c.controlDetail.exceptionsTitle"
+          [caption]="c.controlDetail.exceptionsCaption"
+          padding="flush"
+          style="display:block;margin-top: var(--space-4);">
+          <div class="exception-form">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="desc-field">
+              <mat-label>{{ c.controlDetail.exceptionDescriptionLabel }}</mat-label>
+              <input matInput [(ngModel)]="exceptionDescription" [placeholder]="c.controlDetail.exceptionDescriptionPlaceholder">
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" style="width:170px;">
+              <mat-label>{{ c.controlDetail.exceptionDetectedDateLabel }}</mat-label>
+              <input matInput type="date" [(ngModel)]="exceptionDetectedDate">
+            </mat-form-field>
+            <button class="btn primary sm" [disabled]="!exceptionDescription.trim() || !exceptionDetectedDate || loggingException()" (click)="logException()">
+              {{ c.controlDetail.logExceptionButton }}
+            </button>
+          </div>
+
+          <ng-container *ngIf="exceptions().length; else emptyExceptions">
+            <div class="exception-row" *ngFor="let e of exceptions()">
+              <div style="flex:1;">
+                <div class="desc">{{ e.description }}</div>
+                <div class="dates">
+                  {{ c.controlDetail.exceptionDetectedDateLabel }}: {{ e.detectedDate | date:'MMM d, y' }}
+                  <ng-container *ngIf="e.remediatedDate"> · {{ c.controlDetail.remediatedDateLabel }}: {{ e.remediatedDate | date:'MMM d, y' }}</ng-container>
+                </div>
+              </div>
+              <ui-badge [variant]="e.status === 'OPEN' ? 'warning' : 'success'">
+                {{ e.status === 'OPEN' ? c.controlDetail.statusOpen : c.controlDetail.statusRemediated }}
+              </ui-badge>
+              <button *ngIf="e.status === 'OPEN'" class="btn ghost sm" (click)="remediateException(e)">
+                <mat-icon style="font-size:14px;height:14px;width:14px;">check</mat-icon>{{ c.controlDetail.remediateButton }}
+              </button>
+              <button class="btn ghost sm" (click)="deleteException(e)">
+                <mat-icon style="font-size:14px;height:14px;width:14px;">delete</mat-icon>
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #emptyExceptions>
+            <ui-empty-state
+              icon="rule"
+              [title]="c.controlDetail.exceptionsEmptyTitle"
+              [description]="c.controlDetail.exceptionsEmptyMessage">
+            </ui-empty-state>
+          </ng-template>
+        </ui-card>
       </ng-container>
 
       <div *ngIf="msg() as m" class="toast" [class.error]="msgIsError()">
@@ -241,6 +312,11 @@ export class ControlDetailComponent implements OnInit {
   control = signal<Control | null>(null);
   mappings = signal<ControlMapping[]>([]);
   aiAnalyses = signal<AiAnalysisSummary[]>([]);
+  members = signal<Member[]>([]);
+  exceptions = signal<ControlException[]>([]);
+  exceptionDescription = '';
+  exceptionDetectedDate = '';
+  loggingException = signal(false);
   busy = signal<Record<string, boolean>>({});
   msg = signal<string | null>(null);
   msgIsError = signal(false);
@@ -251,11 +327,26 @@ export class ControlDetailComponent implements OnInit {
     this.mappings().filter(m => m.mappingType === MAPPING_TYPE.AI_SUGGESTED).length);
 
   ngOnInit(): void {
+    this.api.members().subscribe(m => this.members.set(m));
     this.route.paramMap.subscribe(pm => {
       const id = pm.get('id');
       if (!id) return;
       this.controlId = id;
       this.reload();
+    });
+  }
+
+  assignOwner(userId: string | null): void {
+    this.api.assignControlOwner(this.controlId, userId).subscribe({
+      next: (ctrl) => {
+        this.control.set(ctrl);
+        this.msg.set(this.c.controlDetail.ownerAssignedToast);
+        this.msgIsError.set(false);
+      },
+      error: () => {
+        this.msg.set(this.c.controlDetail.mappingActionError);
+        this.msgIsError.set(true);
+      },
     });
   }
 
@@ -312,5 +403,57 @@ export class ControlDetailComponent implements OnInit {
     this.api.control(this.controlId).subscribe(c => this.control.set(c));
     this.api.controlMappings(this.controlId).subscribe(m => this.mappings.set(m));
     this.api.controlAiAnalyses(this.controlId).subscribe(a => this.aiAnalyses.set(a));
+    this.api.controlExceptions(this.controlId).subscribe(e => this.exceptions.set(e));
+  }
+
+  logException(): void {
+    if (!this.exceptionDescription.trim() || !this.exceptionDetectedDate) return;
+    this.loggingException.set(true);
+    this.api.logControlException(this.controlId, {
+      description: this.exceptionDescription.trim(),
+      detectedDate: this.exceptionDetectedDate,
+    }).subscribe({
+      next: () => {
+        this.msg.set(this.c.controlDetail.exceptionLoggedToast);
+        this.msgIsError.set(false);
+        this.exceptionDescription = '';
+        this.exceptionDetectedDate = '';
+        this.api.controlExceptions(this.controlId).subscribe(e => this.exceptions.set(e));
+      },
+      error: () => {
+        this.msg.set(this.c.controlDetail.mappingActionError);
+        this.msgIsError.set(true);
+      },
+      complete: () => this.loggingException.set(false),
+    });
+  }
+
+  remediateException(e: ControlException): void {
+    const today = new Date().toISOString().slice(0, 10);
+    this.api.remediateControlException(this.controlId, e.id, today).subscribe({
+      next: (updated) => {
+        this.exceptions.set(this.exceptions().map(x => x.id === updated.id ? updated : x));
+        this.msg.set(this.c.controlDetail.exceptionRemediatedToast);
+        this.msgIsError.set(false);
+      },
+      error: () => {
+        this.msg.set(this.c.controlDetail.mappingActionError);
+        this.msgIsError.set(true);
+      },
+    });
+  }
+
+  deleteException(e: ControlException): void {
+    this.api.deleteControlException(this.controlId, e.id).subscribe({
+      next: () => {
+        this.exceptions.set(this.exceptions().filter(x => x.id !== e.id));
+        this.msg.set(this.c.controlDetail.exceptionDeletedToast);
+        this.msgIsError.set(false);
+      },
+      error: () => {
+        this.msg.set(this.c.controlDetail.mappingActionError);
+        this.msgIsError.set(true);
+      },
+    });
   }
 }

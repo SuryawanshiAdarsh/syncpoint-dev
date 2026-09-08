@@ -3,6 +3,7 @@ package com.syncpoint.compliance.compliance.controller;
 import com.syncpoint.compliance.ai.dto.AiAnalysisSummaryResponse;
 import com.syncpoint.compliance.ai.service.AiAnalysisService;
 import com.syncpoint.compliance.common.tenant.TenantContext;
+import com.syncpoint.compliance.compliance.dto.AssignControlOwnerRequest;
 import com.syncpoint.compliance.compliance.dto.ControlResponse;
 import com.syncpoint.compliance.compliance.service.ComplianceService;
 import com.syncpoint.compliance.evidence.dto.ControlMappingResponse;
@@ -11,8 +12,11 @@ import com.syncpoint.compliance.evidence.entity.EvidenceControlMapping;
 import com.syncpoint.compliance.evidence.repository.EvidenceControlMappingRepository;
 import com.syncpoint.compliance.evidence.service.EvidenceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -49,6 +53,13 @@ public class ControlController {
     @GetMapping("/{id}")
     public ResponseEntity<ControlResponse> get(@PathVariable UUID id) {
         return ResponseEntity.ok(complianceService.getControl(id));
+    }
+
+    @PutMapping("/{id}/owner")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<ControlResponse> assignOwner(@PathVariable UUID id,
+                                                       @RequestBody AssignControlOwnerRequest req) {
+        return ResponseEntity.ok(complianceService.assignOwner(id, req.userId()));
     }
 
     @GetMapping("/{id}/evidence")

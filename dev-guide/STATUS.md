@@ -1,4 +1,4 @@
-# Syncpoint MVP — Status (as of 2026-09-04)
+# Syncpoint MVP — Status (as of 2026-09-08)
 
 At-a-glance status of everything against the two specifications
 (`PROJECT_SPEC.md`, `PROJECT_SPEC2.md`, `PROJECT_SPEC3.md`).
@@ -11,7 +11,56 @@ Legend: ✅ done and live · 🟡 partial · ⏳ deferred · 🚫 not in MVP sco
 
 ---
 
-## What changed 2026-09-03 → 2026-09-04 (most recent pass)
+## What changed 2026-09-04 → 2026-09-08 (v0.8.0, most recent pass)
+
+Driven by a PO-style SOC 2 Type I/Type II readiness review (see
+[SOC2-READINESS-BACKLOG.md](SOC2-READINESS-BACKLOG.md) items #9, #14-17, #43). Closes the
+"onboarding is a product tour, not a SOC 2 kickoff" gap and the "no risk register" gap identified
+in that review. Version bumped `0.7.0` → `0.8.0` (`pom.xml`, `package.json`) to mark this pass.
+
+- ✅ **SOC 2 Kickoff Wizard, wired into onboarding** (closes #14-17) — TSC scope selector
+  (Security mandatory + optional Availability/Confidentiality), Type I vs Type II selector with
+  observation-period dates, system description (services/boundaries/components/subservice orgs),
+  control-owner assignment. Lives in Settings ("Compliance Program" card); a new onboarding Step 2
+  ("Define your compliance program") makes it discoverable instead of a settings page nobody
+  finds. Migrations V27-V29.
+- ✅ **Readiness / Gap Report** (closes #9) — `GET /api/v1/readiness-report/download`, a
+  plain-text artifact a customer can hand their CPA firm: program details, system description,
+  coverage summary, gap list with owners, full control list. Downloadable from Settings.
+- ✅ **Risk Register — CC3-series risk assessment** (closes #43) — new `risks` +
+  `risk_control_links` tables (V30). Category/likelihood/impact scoring (1-9), status workflow
+  (Identified/Mitigating/Mitigated/Accepted), owner assignment, control linking. Shipped as two
+  pages: a paginated, view-only list (`/risk-register`) and a dedicated detail page
+  (`/risk-register/:id`, mirrors the Policy Detail pattern) that owns every action — status,
+  owner, control linking, edit, delete. List cards intentionally show only title/category/score/
+  status; everything else lives on the detail page so the list stays scannable.
+- ✅ **Type II observation-period evidence coverage** — Readiness Report now buckets the
+  observation period into calendar months and reports, per control, how many months have
+  supporting evidence vs. how many are required. Closes the biggest Type-II-specific gap: proving
+  evidence was sampled *throughout* the period, not just once.
+- ✅ **CUEC + "significant changes during the period"** — split out of the generic subservice-org
+  text field into their own fields (V31); the latter only shown/required for Type II.
+- ✅ **BUG-011 fixed: broken access control on almost the entire `/api/v1/**` surface** — found
+  incidentally while testing the Readiness Report anonymously. `SecurityConfig`'s authorization
+  rule (`AuthorizationManagers.not(hasRole("ACKNOWLEDGER"))`) was satisfied by *anonymous*
+  principals too (they don't have `ACKNOWLEDGER` either), so unauthenticated requests reached
+  controller/service code instead of being rejected at the filter chain — surfacing as unhandled
+  500s instead of clean 401s. Fixed by requiring `authenticated()` **and** not-ACKNOWLEDGER. See
+  [BUG-BACKLOG.md](BUG-BACKLOG.md#bug-011-anonymous-requests-passed-authorization-on-nearly-every-endpoint).
+- 🟡 **CORS still hardcoded to wildcard** — unchanged from the prior pass, still flagged
+  DEMO-ONLY in `SecurityConfig.corsConfigurationSource()`. Not touched this pass; do not confuse
+  with BUG-011 above, which was a different (now-fixed) authorization defect.
+- ✅ **Control exception/deviation tracking** (closes #50, same v0.8.0 pass) — new
+  `control_exceptions` table (V32); logged and remediated directly from Control Detail
+  (description, detected date, remediated date, status). Summarized in the Readiness Report's
+  Type II section, distinct from the evidence-coverage feature above — this proves *nothing went
+  wrong* (or tracks what did and how it was fixed), not just that evidence exists. Originally
+  scoped as a deferred follow-on in this same pass, then built and verified before the pass closed.
+
+---
+
+## What changed 2026-09-03 → 2026-09-04 (prior pass)
+
 
 This pass absorbed **M1 (onboarding gate)** and **M8 (scheduled collection)** out of their
 original M1→M10 order, plus shipped a large amount of scope **not in the original

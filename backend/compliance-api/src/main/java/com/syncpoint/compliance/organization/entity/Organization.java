@@ -2,12 +2,15 @@ package com.syncpoint.compliance.organization.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -36,6 +39,40 @@ public class Organization {
 
     @Column(name = "onboarding_completed_at")
     private Instant onboardingCompletedAt;
+
+    @Column(name = "tsc_scope_extra", nullable = false)
+    private String tscScopeExtra = "";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "report_type", nullable = false, length = 16)
+    private ReportType reportType = ReportType.TYPE_I;
+
+    @Column(name = "observation_period_start")
+    private LocalDate observationPeriodStart;
+
+    @Column(name = "observation_period_end")
+    private LocalDate observationPeriodEnd;
+
+    @Column(name = "target_report_date")
+    private LocalDate targetReportDate;
+
+    @Column(name = "services_provided", columnDefinition = "text")
+    private String servicesProvided;
+
+    @Column(name = "system_boundaries", columnDefinition = "text")
+    private String systemBoundaries;
+
+    @Column(name = "components_description", columnDefinition = "text")
+    private String componentsDescription;
+
+    @Column(name = "subservice_organizations", columnDefinition = "text")
+    private String subserviceOrganizations;
+
+    @Column(name = "complementary_user_entity_controls", columnDefinition = "text")
+    private String complementaryUserEntityControls;
+
+    @Column(name = "significant_changes_during_period", columnDefinition = "text")
+    private String significantChangesDuringPeriod;
 
     public Organization() {
     }
@@ -72,6 +109,29 @@ public class Organization {
         this.onboardingCompleted = true;
         this.onboardingCompletedAt = Instant.now();
     }
+
+    public String getTscScopeExtra() { return tscScopeExtra; }
+    public void setTscScopeExtra(String tscScopeExtra) { this.tscScopeExtra = tscScopeExtra == null ? "" : tscScopeExtra; }
+    public ReportType getReportType() { return reportType; }
+    public void setReportType(ReportType reportType) { this.reportType = reportType; }
+    public LocalDate getObservationPeriodStart() { return observationPeriodStart; }
+    public void setObservationPeriodStart(LocalDate observationPeriodStart) { this.observationPeriodStart = observationPeriodStart; }
+    public LocalDate getObservationPeriodEnd() { return observationPeriodEnd; }
+    public void setObservationPeriodEnd(LocalDate observationPeriodEnd) { this.observationPeriodEnd = observationPeriodEnd; }
+    public LocalDate getTargetReportDate() { return targetReportDate; }
+    public void setTargetReportDate(LocalDate targetReportDate) { this.targetReportDate = targetReportDate; }
+    public String getServicesProvided() { return servicesProvided; }
+    public void setServicesProvided(String servicesProvided) { this.servicesProvided = servicesProvided; }
+    public String getSystemBoundaries() { return systemBoundaries; }
+    public void setSystemBoundaries(String systemBoundaries) { this.systemBoundaries = systemBoundaries; }
+    public String getComponentsDescription() { return componentsDescription; }
+    public void setComponentsDescription(String componentsDescription) { this.componentsDescription = componentsDescription; }
+    public String getSubserviceOrganizations() { return subserviceOrganizations; }
+    public void setSubserviceOrganizations(String subserviceOrganizations) { this.subserviceOrganizations = subserviceOrganizations; }
+    public String getComplementaryUserEntityControls() { return complementaryUserEntityControls; }
+    public void setComplementaryUserEntityControls(String complementaryUserEntityControls) { this.complementaryUserEntityControls = complementaryUserEntityControls; }
+    public String getSignificantChangesDuringPeriod() { return significantChangesDuringPeriod; }
+    public void setSignificantChangesDuringPeriod(String significantChangesDuringPeriod) { this.significantChangesDuringPeriod = significantChangesDuringPeriod; }
 
     @Override
     public boolean equals(Object o) {

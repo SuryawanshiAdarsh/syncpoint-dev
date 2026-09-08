@@ -281,7 +281,8 @@ export class ShellComponent implements OnInit {
         { path: '/evidence',      label: CAPTIONS.shell.navEvidence,     icon: 'description' } ] },
     { title: CAPTIONS.shell.sidebarSectionGovernance, items: [
         { path: '/policies',      label: CAPTIONS.shell.navPolicies,     icon: 'gavel' },
-        { path: '/my-policies',   label: CAPTIONS.shell.navMyPolicies,   icon: 'task_alt' } ] },
+        { path: '/my-policies',   label: CAPTIONS.shell.navMyPolicies,   icon: 'task_alt' },
+        { path: '/risk-register', label: CAPTIONS.shell.navRiskRegister, icon: 'report_problem' } ] },
     { title: CAPTIONS.shell.sidebarSectionAutomation, items: [
         { path: '/integrations',  label: CAPTIONS.shell.navIntegrations, icon: 'hub' },
         { path: '/activity',      label: CAPTIONS.shell.navActivity,     icon: 'history' },

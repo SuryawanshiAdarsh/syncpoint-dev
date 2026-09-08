@@ -73,6 +73,22 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
       padding-top: var(--space-5);
       border-top: 1px solid var(--color-divider);
     }
+    .program-label {
+      font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--space-3);
+    }
+    .scope-row { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+    .scope-chip {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      font-size: var(--text-sm); cursor: pointer;
+    }
+    .scope-chip.disabled { color: var(--color-text-muted); cursor: default; }
+    .desc-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);
+    }
+    @media (max-width: 900px) { .desc-grid { grid-template-columns: 1fr; } }
   `],
   template: `
     <div class="page">
@@ -222,6 +238,77 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
             <ui-empty-state icon="hub" [title]="c.settings.automationEmptyTitle" [description]="c.settings.automationEmptyMessage"></ui-empty-state>
           </ng-template>
         </ui-card>
+
+        <ui-card [title]="c.settings.programTitle" [caption]="c.settings.programCaption" style="display:block;margin-top:var(--space-4);">
+          <div class="program-label">{{ c.settings.programScopeLabel }}</div>
+          <div class="scope-row">
+            <label class="scope-chip disabled"><input type="checkbox" checked disabled>{{ c.settings.programScopeSecurity }}</label>
+            <label class="scope-chip"><input type="checkbox" [(ngModel)]="scopeAvailability">{{ c.settings.programScopeAvailability }}</label>
+            <label class="scope-chip"><input type="checkbox" [(ngModel)]="scopeConfidentiality">{{ c.settings.programScopeConfidentiality }}</label>
+          </div>
+
+          <div class="row" style="margin-top:var(--space-5);">
+            <mat-form-field appearance="outline" style="width:200px;" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programReportTypeLabel }}</mat-label>
+              <mat-select [(ngModel)]="reportType">
+                <mat-option value="TYPE_I">{{ c.settings.programReportTypeI }}</mat-option>
+                <mat-option value="TYPE_II">{{ c.settings.programReportTypeII }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="width:190px;" subscriptSizing="dynamic" *ngIf="reportType === 'TYPE_II'">
+              <mat-label>{{ c.settings.programObservationStart }}</mat-label>
+              <input matInput type="date" [(ngModel)]="observationPeriodStart">
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="width:190px;" subscriptSizing="dynamic" *ngIf="reportType === 'TYPE_II'">
+              <mat-label>{{ c.settings.programObservationEnd }}</mat-label>
+              <input matInput type="date" [(ngModel)]="observationPeriodEnd">
+            </mat-form-field>
+            <mat-form-field appearance="outline" style="width:190px;" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programTargetReportDate }}</mat-label>
+              <input matInput type="date" [(ngModel)]="targetReportDate">
+            </mat-form-field>
+          </div>
+
+          <div class="program-label" style="margin-top:var(--space-5);">{{ c.settings.programSystemDescriptionLabel }}</div>
+          <div class="desc-grid">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programServicesProvided }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="servicesProvided"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programSystemBoundaries }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="systemBoundaries"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programComponents }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="componentsDescription"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programSubserviceOrgs }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="subserviceOrganizations"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.programCuecLabel }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="complementaryUserEntityControls"></textarea>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" *ngIf="reportType === 'TYPE_II'">
+              <mat-label>{{ c.settings.programSignificantChangesLabel }}</mat-label>
+              <textarea matInput rows="3" [(ngModel)]="significantChangesDuringPeriod"></textarea>
+            </mat-form-field>
+          </div>
+
+          <div class="row" style="margin-top:var(--space-4);">
+            <ui-button variant="primary" [loading]="savingProgram()" [loadingText]="c.settings.savingButton" (click)="saveProgram()">
+              {{ c.settings.saveButton }}
+            </ui-button>
+            <ui-button variant="ghost" [loading]="generatingDoc()" [loadingText]="c.settings.programGeneratingButton" (click)="generateSystemDescription()">
+              {{ c.settings.programGenerateButton }}
+            </ui-button>
+            <ui-button variant="ghost" [loading]="downloadingReport()" [loadingText]="c.settings.programDownloadingButton" (click)="downloadReadinessReport()">
+              {{ c.settings.programDownloadButton }}
+            </ui-button>
+          </div>
+        </ui-card>
       </ng-container>
 
       <ng-template #restricted>
@@ -253,6 +340,22 @@ export class SettingsComponent implements OnInit {
 
   orgName = '';
   savingOrg = signal(false);
+
+  scopeAvailability = false;
+  scopeConfidentiality = false;
+  reportType: 'TYPE_I' | 'TYPE_II' = 'TYPE_I';
+  observationPeriodStart = '';
+  observationPeriodEnd = '';
+  targetReportDate = '';
+  servicesProvided = '';
+  systemBoundaries = '';
+  componentsDescription = '';
+  subserviceOrganizations = '';
+  complementaryUserEntityControls = '';
+  significantChangesDuringPeriod = '';
+  savingProgram = signal(false);
+  generatingDoc = signal(false);
+  downloadingReport = signal(false);
 
   inviteName = '';
   inviteEmail = '';
@@ -355,7 +458,22 @@ export class SettingsComponent implements OnInit {
   }
 
   private reload(): void {
-    this.api.organization().subscribe(o => { this.org.set(o); this.orgName = o.name; });
+    this.api.organization().subscribe(o => {
+      this.org.set(o);
+      this.orgName = o.name;
+      this.scopeAvailability = o.tscScope.includes('AVAILABILITY');
+      this.scopeConfidentiality = o.tscScope.includes('CONFIDENTIALITY');
+      this.reportType = o.reportType;
+      this.observationPeriodStart = o.observationPeriodStart ?? '';
+      this.observationPeriodEnd = o.observationPeriodEnd ?? '';
+      this.targetReportDate = o.targetReportDate ?? '';
+      this.servicesProvided = o.servicesProvided ?? '';
+      this.systemBoundaries = o.systemBoundaries ?? '';
+      this.componentsDescription = o.componentsDescription ?? '';
+      this.subserviceOrganizations = o.subserviceOrganizations ?? '';
+      this.complementaryUserEntityControls = o.complementaryUserEntityControls ?? '';
+      this.significantChangesDuringPeriod = o.significantChangesDuringPeriod ?? '';
+    });
     this.api.subscription().subscribe(s => this.subscription.set(s));
     this.api.subscriptionRequests().subscribe(reqs => this.latestRequest.set(reqs[0] ?? null));
     this.reloadMembers();
@@ -363,4 +481,60 @@ export class SettingsComponent implements OnInit {
   }
   private reloadMembers(): void { this.api.members().subscribe(list => this.members.set(list)); }
   private reloadIntegrations(): void { this.api.integrations().subscribe(list => this.integrations.set(list)); }
+
+  saveProgram(): void {
+    this.savingProgram.set(true);
+    const extra: string[] = [];
+    if (this.scopeAvailability) extra.push('AVAILABILITY');
+    if (this.scopeConfidentiality) extra.push('CONFIDENTIALITY');
+    this.api.updateComplianceProgram({
+      tscScopeExtra: extra,
+      reportType: this.reportType,
+      observationPeriodStart: this.reportType === 'TYPE_II' ? (this.observationPeriodStart || null) : null,
+      observationPeriodEnd: this.reportType === 'TYPE_II' ? (this.observationPeriodEnd || null) : null,
+      targetReportDate: this.targetReportDate || null,
+      servicesProvided: this.servicesProvided || null,
+      systemBoundaries: this.systemBoundaries || null,
+      componentsDescription: this.componentsDescription || null,
+      subserviceOrganizations: this.subserviceOrganizations || null,
+      complementaryUserEntityControls: this.complementaryUserEntityControls || null,
+      significantChangesDuringPeriod: this.reportType === 'TYPE_II' ? (this.significantChangesDuringPeriod || null) : null,
+    }).subscribe({
+      next: (o) => {
+        this.org.set(o);
+        this.msg.set(this.c.settings.programSavedToast);
+        this.err.set(null);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.savingProgram.set(false),
+    });
+  }
+
+  generateSystemDescription(): void {
+    this.generatingDoc.set(true);
+    this.api.generateSystemDescription().subscribe({
+      next: () => {
+        this.msg.set(this.c.settings.programGeneratedToast);
+        this.err.set(null);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.generatingDoc.set(false),
+    });
+  }
+
+  downloadReadinessReport(): void {
+    this.downloadingReport.set(true);
+    this.api.readinessReportBlob().subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'soc2-readiness-report.txt';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.downloadingReport.set(false),
+    });
+  }
 }

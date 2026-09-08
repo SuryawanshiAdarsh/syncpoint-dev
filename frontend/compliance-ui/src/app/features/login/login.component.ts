@@ -186,16 +186,16 @@ import { CAPTIONS } from '@captions';
 
         <div class="features">
           <div class="feature">
+            <span class="dot"><mat-icon>rocket_launch</mat-icon></span>
+            <span class="txt"><strong>{{ c.auth.loginFeature1Title }}</strong> {{ c.auth.loginFeature1Body }}</span>
+          </div>
+          <div class="feature">
             <span class="dot"><mat-icon>bolt</mat-icon></span>
-            <span class="txt"><strong>Deterministic collectors</strong> for GitHub, AWS &amp; Jira — never AI guessing at facts the API can tell us.</span>
+            <span class="txt"><strong>{{ c.auth.loginFeature2Title }}</strong> {{ c.auth.loginFeature2Body }}</span>
           </div>
           <div class="feature">
-            <span class="dot"><mat-icon>psychology</mat-icon></span>
-            <span class="txt"><strong>AI mapping with citations</strong> — every suggestion is reviewable, and humans always own the final decision.</span>
-          </div>
-          <div class="feature">
-            <span class="dot"><mat-icon>verified_user</mat-icon></span>
-            <span class="txt"><strong>Multi-tenant, encrypted secrets</strong> — envelope-encrypted credential store, full audit log, tenant isolation tested.</span>
+            <span class="dot"><mat-icon>fact_check</mat-icon></span>
+            <span class="txt"><strong>{{ c.auth.loginFeature3Title }}</strong> {{ c.auth.loginFeature3Body }}</span>
           </div>
         </div>
 

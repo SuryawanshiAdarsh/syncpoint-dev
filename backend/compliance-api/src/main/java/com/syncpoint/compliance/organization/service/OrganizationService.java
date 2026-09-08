@@ -10,14 +10,19 @@ import com.syncpoint.compliance.common.exception.ConflictException;
 import com.syncpoint.compliance.common.exception.ForbiddenException;
 import com.syncpoint.compliance.common.exception.NotFoundException;
 import com.syncpoint.compliance.common.tenant.TenantContext;
+import com.syncpoint.compliance.common.util.ByteArrayMultipartFile;
+import com.syncpoint.compliance.evidence.entity.EvidenceSourceType;
+import com.syncpoint.compliance.evidence.service.EvidenceService;
 import com.syncpoint.compliance.notification.service.EmailService;
 import com.syncpoint.compliance.organization.dto.AddMemberRequest;
 import com.syncpoint.compliance.organization.dto.MemberResponse;
 import com.syncpoint.compliance.organization.dto.OrganizationResponse;
+import com.syncpoint.compliance.organization.dto.UpdateComplianceProgramRequest;
 import com.syncpoint.compliance.organization.dto.UpdateMemberRoleRequest;
 import com.syncpoint.compliance.organization.dto.UpdateOrganizationRequest;
 import com.syncpoint.compliance.organization.entity.Organization;
 import com.syncpoint.compliance.organization.entity.OrganizationMember;
+import com.syncpoint.compliance.organization.entity.ReportType;
 import com.syncpoint.compliance.organization.entity.Role;
 import com.syncpoint.compliance.organization.repository.OrganizationMemberRepository;
 import com.syncpoint.compliance.organization.repository.OrganizationRepository;
@@ -26,7 +31,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -45,6 +53,7 @@ public class OrganizationService {
     private final AuditService auditService;
     private final AuthTokenService authTokenService;
     private final EmailService emailService;
+    private final EvidenceService evidenceService;
     private final String frontendUrl;
 
     public OrganizationService(OrganizationRepository organizationRepository,
@@ -54,6 +63,7 @@ public class OrganizationService {
                                AuditService auditService,
                                AuthTokenService authTokenService,
                                EmailService emailService,
+                               EvidenceService evidenceService,
                                @Value("${syncpoint.frontend-url:http://localhost:4200}") String frontendUrl) {
         this.organizationRepository = organizationRepository;
         this.memberRepository = memberRepository;
@@ -62,6 +72,7 @@ public class OrganizationService {
         this.auditService = auditService;
         this.authTokenService = authTokenService;
         this.emailService = emailService;
+        this.evidenceService = evidenceService;
         this.frontendUrl = frontendUrl;
     }
 
@@ -76,6 +87,61 @@ public class OrganizationService {
         Organization org = getCurrentOrganization();
         org.setName(req.name().trim());
         return toResponse(organizationRepository.save(org));
+    }
+
+    @Transactional
+    public OrganizationResponse updateComplianceProgram(UpdateComplianceProgramRequest req) {
+        Organization org = getCurrentOrganization();
+        if (req.tscScopeExtra() != null) {
+            org.setTscScopeExtra(String.join(",", req.tscScopeExtra()));
+        }
+        if (req.reportType() != null) {
+            org.setReportType(ReportType.valueOf(req.reportType()));
+        }
+        org.setObservationPeriodStart(req.observationPeriodStart());
+        org.setObservationPeriodEnd(req.observationPeriodEnd());
+        org.setTargetReportDate(req.targetReportDate());
+        org.setServicesProvided(req.servicesProvided());
+        org.setSystemBoundaries(req.systemBoundaries());
+        org.setComponentsDescription(req.componentsDescription());
+        org.setSubserviceOrganizations(req.subserviceOrganizations());
+        org.setComplementaryUserEntityControls(req.complementaryUserEntityControls());
+        org.setSignificantChangesDuringPeriod(req.significantChangesDuringPeriod());
+
+        Organization saved = organizationRepository.save(org);
+        TenantContext.Principal actor = TenantContext.require();
+        auditService.record(saved.getId(), actor.userId(),
+                AuditEvents.COMPLIANCE_PROGRAM_UPDATED, "organization", saved.getId());
+        return toResponse(saved);
+    }
+
+    /** Renders the 4 system-description fields into a plain-text document and mirrors it into Evidence. */
+    @Transactional
+    public void generateSystemDescriptionDocument() {
+        Organization org = getCurrentOrganization();
+        StringBuilder sb = new StringBuilder();
+        sb.append("System Description \u2014 ").append(org.getName()).append('\n');
+        sb.append("Generated ").append(java.time.Instant.now()).append("\n\n");
+        sb.append("Services Provided\n").append(blank(org.getServicesProvided())).append("\n\n");
+        sb.append("System Boundaries\n").append(blank(org.getSystemBoundaries())).append("\n\n");
+        sb.append("Components\n").append(blank(org.getComponentsDescription())).append("\n\n");
+        sb.append("Subservice Organizations\n").append(blank(org.getSubserviceOrganizations())).append("\n\n");
+        sb.append("Complementary User-Entity Controls\n").append(blank(org.getComplementaryUserEntityControls())).append("\n\n");
+        sb.append("Significant Changes During the Period\n").append(blank(org.getSignificantChangesDuringPeriod())).append('\n');
+
+        byte[] bytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+        ByteArrayMultipartFile file = new ByteArrayMultipartFile("file", "system-description.txt",
+                "text/plain", bytes);
+        evidenceService.upload("System Description", "Generated by the SOC 2 Kickoff Wizard", file,
+                EvidenceSourceType.SYSTEM_DESCRIPTION, "kickoff-wizard");
+
+        TenantContext.Principal actor = TenantContext.require();
+        auditService.record(org.getId(), actor.userId(),
+                AuditEvents.SYSTEM_DESCRIPTION_GENERATED, "organization", org.getId());
+    }
+
+    private static String blank(String s) {
+        return (s == null || s.isBlank()) ? "(not yet documented)" : s;
     }
 
     @Transactional
@@ -180,7 +246,16 @@ public class OrganizationService {
     }
 
     private OrganizationResponse toResponse(Organization org) {
+        List<String> scope = new ArrayList<>();
+        scope.add("SECURITY");
+        if (org.getTscScopeExtra() != null && !org.getTscScopeExtra().isBlank()) {
+            scope.addAll(Arrays.asList(org.getTscScopeExtra().split(",")));
+        }
         return new OrganizationResponse(org.getId(), org.getName(), org.getSlug(), org.getCreatedAt(),
-                org.isOnboardingCompleted(), org.getOnboardingCompletedAt());
+                org.isOnboardingCompleted(), org.getOnboardingCompletedAt(),
+                scope, org.getReportType(), org.getObservationPeriodStart(), org.getObservationPeriodEnd(),
+                org.getTargetReportDate(), org.getServicesProvided(), org.getSystemBoundaries(),
+                org.getComponentsDescription(), org.getSubserviceOrganizations(),
+                org.getComplementaryUserEntityControls(), org.getSignificantChangesDuringPeriod());
     }
 }

@@ -8,7 +8,9 @@ import {
   CoverageTrendPoint, DashboardSummary, Evidence, EvidenceVersion, ExportJob, Framework, Integration, Mapping, Me,
   Member, Organization, TokenResponse, Policy, PolicyDetail, PolicyPortalPage, PolicyPortalDetail, PolicyCoverage,
   AdminOrganizationSummary, AdminOrganizationDetail, UpdateSubscriptionRequest, SubscriptionResponse,
-  CreateSubscriptionRequestBody, SubscriptionRequestResponse, AdminSubscriptionRequestResponse
+  CreateSubscriptionRequestBody, SubscriptionRequestResponse, AdminSubscriptionRequestResponse,
+  Risk, RiskStatus, CreateRiskRequest, UpdateRiskRequest,
+  ControlException, CreateControlExceptionRequest
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -175,8 +177,63 @@ export class ApiService {
   completeOnboarding(): Observable<Organization> {
     return this.http.post<Organization>(`${this.base}/organizations/current/onboarding/complete`, {});
   }
+  updateComplianceProgram(body: {
+    tscScopeExtra: string[]; reportType: string;
+    observationPeriodStart: string | null; observationPeriodEnd: string | null; targetReportDate: string | null;
+    servicesProvided: string | null; systemBoundaries: string | null;
+    componentsDescription: string | null; subserviceOrganizations: string | null;
+    complementaryUserEntityControls: string | null; significantChangesDuringPeriod: string | null;
+  }): Observable<Organization> {
+    return this.http.patch<Organization>(`${this.base}/organizations/current/compliance-program`, body);
+  }
+  generateSystemDescription(): Observable<void> {
+    return this.http.post<void>(`${this.base}/organizations/current/system-description/generate`, {});
+  }
+  readinessReportBlob(): Observable<Blob> {
+    return this.http.get(`${this.base}/readiness-report/download`, { responseType: 'blob' });
+  }
+  assignControlOwner(controlId: string, userId: string | null): Observable<Control> {
+    return this.http.put<Control>(`${this.base}/controls/${controlId}/owner`, { userId });
+  }
   members(): Observable<Member[]> {
     return this.http.get<Member[]>(`${this.base}/organizations/current/members`);
+  }
+
+  // Risk register (SOC 2 CC3-series risk assessment)
+  risks(): Observable<Risk[]> {
+    return this.http.get<Risk[]>(`${this.base}/risks`);
+  }
+  risk(id: string): Observable<Risk> {
+    return this.http.get<Risk>(`${this.base}/risks/${id}`);
+  }
+  createRisk(body: CreateRiskRequest): Observable<Risk> {
+    return this.http.post<Risk>(`${this.base}/risks`, body);
+  }
+  updateRisk(id: string, body: UpdateRiskRequest): Observable<Risk> {
+    return this.http.put<Risk>(`${this.base}/risks/${id}`, body);
+  }
+  updateRiskStatus(id: string, status: RiskStatus): Observable<Risk> {
+    return this.http.put<Risk>(`${this.base}/risks/${id}/status`, { status });
+  }
+  assignRiskOwner(id: string, userId: string | null): Observable<Risk> {
+    return this.http.put<Risk>(`${this.base}/risks/${id}/owner`, { userId });
+  }
+  deleteRisk(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/risks/${id}`);
+  }
+
+  // Control exceptions/deviations (SOC 2 Type II — proof a control failed and was remediated)
+  controlExceptions(controlId: string): Observable<ControlException[]> {
+    return this.http.get<ControlException[]>(`${this.base}/controls/${controlId}/exceptions`);
+  }
+  logControlException(controlId: string, body: CreateControlExceptionRequest): Observable<ControlException> {
+    return this.http.post<ControlException>(`${this.base}/controls/${controlId}/exceptions`, body);
+  }
+  remediateControlException(controlId: string, exceptionId: string, remediatedDate: string): Observable<ControlException> {
+    return this.http.put<ControlException>(`${this.base}/controls/${controlId}/exceptions/${exceptionId}/remediate`, { remediatedDate });
+  }
+  deleteControlException(controlId: string, exceptionId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/controls/${controlId}/exceptions/${exceptionId}`);
   }
   addMember(body: { email: string; name: string; role: string }): Observable<Member> {
     return this.http.post<Member>(`${this.base}/organizations/current/members`, body);

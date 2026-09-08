@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { forkJoin } from 'rxjs';
 
 import { ApiService } from '../../core/api/api.service';
-import { DashboardSummary, Evidence, Framework, Integration } from '../../core/api/api.types';
+import { DashboardSummary, Evidence, Framework, Integration, Organization } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
 
 @Component({
@@ -101,7 +101,7 @@ import { CAPTIONS } from '@captions';
           <div class="progress-bar"><div class="fill" [style.width.%]="progressPct()"></div></div>
           <div>
             <div class="progress-pct">{{ progressPct() }}%</div>
-            <div class="progress-lbl">{{ completedCount() }} of 5 steps complete</div>
+            <div class="progress-lbl">{{ completedCount() }} of 6 steps complete</div>
           </div>
         </div>
       </div>
@@ -122,16 +122,34 @@ import { CAPTIONS } from '@captions';
       </div>
 
       <!-- Step 2 -->
-      <div class="step" [class.complete]="hasIntegration()">
+      <div class="step" [class.complete]="hasComplianceProgram()">
         <div class="step-num">
-          <mat-icon *ngIf="hasIntegration()">check</mat-icon>
-          <span *ngIf="!hasIntegration()">2</span>
+          <mat-icon *ngIf="hasComplianceProgram()">check</mat-icon>
+          <span *ngIf="!hasComplianceProgram()">2</span>
         </div>
         <div class="step-body">
           <h3>{{ c.onboarding.step2Title }}</h3>
           <p class="desc">
+            <span *ngIf="hasComplianceProgram()">✓ Your compliance program and system description are documented.</span>
+            <span *ngIf="!hasComplianceProgram()">{{ c.onboarding.step2Body }}</span>
+          </p>
+          <div class="step-cta" *ngIf="!hasComplianceProgram()">
+            <a routerLink="/settings" class="btn primary"><mat-icon>fact_check</mat-icon>Define compliance program</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step" [class.complete]="hasIntegration()">
+        <div class="step-num">
+          <mat-icon *ngIf="hasIntegration()">check</mat-icon>
+          <span *ngIf="!hasIntegration()">3</span>
+        </div>
+        <div class="step-body">
+          <h3>{{ c.onboarding.step3Title }}</h3>
+          <p class="desc">
             <span *ngIf="hasIntegration()">✓ You have {{ integrations().length }} integration{{ integrations().length === 1 ? '' : 's' }} connected.</span>
-            <span *ngIf="!hasIntegration()">{{ c.onboarding.step2Body }}</span>
+            <span *ngIf="!hasIntegration()">{{ c.onboarding.step3Body }}</span>
           </p>
           <div class="step-cta" *ngIf="!hasIntegration()">
             <a routerLink="/integrations" class="btn primary"><mat-icon>link</mat-icon>Connect GitHub</a>
@@ -139,17 +157,17 @@ import { CAPTIONS } from '@captions';
         </div>
       </div>
 
-      <!-- Step 3 -->
+      <!-- Step 4 -->
       <div class="step" [class.complete]="hasEvidence()">
         <div class="step-num">
           <mat-icon *ngIf="hasEvidence()">check</mat-icon>
-          <span *ngIf="!hasEvidence()">3</span>
+          <span *ngIf="!hasEvidence()">4</span>
         </div>
         <div class="step-body">
-          <h3>{{ c.onboarding.step3Title }}</h3>
+          <h3>{{ c.onboarding.step4Title }}</h3>
           <p class="desc">
             <span *ngIf="hasEvidence()">✓ You have {{ evidenceCount() }} evidence artifact{{ evidenceCount() === 1 ? '' : 's' }} uploaded.</span>
-            <span *ngIf="!hasEvidence()">{{ c.onboarding.step3Body }}</span>
+            <span *ngIf="!hasEvidence()">{{ c.onboarding.step4Body }}</span>
           </p>
           <div class="step-cta" *ngIf="!hasEvidence()">
             <a routerLink="/evidence" class="btn ghost"><mat-icon>upload_file</mat-icon>Upload evidence</a>
@@ -157,32 +175,32 @@ import { CAPTIONS } from '@captions';
         </div>
       </div>
 
-      <!-- Step 4 -->
+      <!-- Step 5 -->
       <div class="step" [class.complete]="hasMappings()">
         <div class="step-num">
           <mat-icon *ngIf="hasMappings()">check</mat-icon>
-          <span *ngIf="!hasMappings()">4</span>
-        </div>
-        <div class="step-body">
-          <h3>{{ c.onboarding.step4Title }}</h3>
-          <p class="desc">
-            <span *ngIf="hasMappings()">✓ You have {{ mappedCount() }} control{{ mappedCount() === 1 ? '' : 's' }} with mappings.</span>
-            <span *ngIf="!hasMappings()">{{ c.onboarding.step4Body }}</span>
-          </p>
-        </div>
-      </div>
-
-      <!-- Step 5 -->
-      <div class="step" [class.complete]="hasCoverage()">
-        <div class="step-num">
-          <mat-icon *ngIf="hasCoverage()">check</mat-icon>
-          <span *ngIf="!hasCoverage()">5</span>
+          <span *ngIf="!hasMappings()">5</span>
         </div>
         <div class="step-body">
           <h3>{{ c.onboarding.step5Title }}</h3>
           <p class="desc">
+            <span *ngIf="hasMappings()">✓ You have {{ mappedCount() }} control{{ mappedCount() === 1 ? '' : 's' }} with mappings.</span>
+            <span *ngIf="!hasMappings()">{{ c.onboarding.step5Body }}</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="step" [class.complete]="hasCoverage()">
+        <div class="step-num">
+          <mat-icon *ngIf="hasCoverage()">check</mat-icon>
+          <span *ngIf="!hasCoverage()">6</span>
+        </div>
+        <div class="step-body">
+          <h3>{{ c.onboarding.step6Title }}</h3>
+          <p class="desc">
             <span *ngIf="hasCoverage()">✓ You're at {{ summary()?.coveragePercent }}% coverage. Nice progress.</span>
-            <span *ngIf="!hasCoverage()">{{ c.onboarding.step5Body }}</span>
+            <span *ngIf="!hasCoverage()">{{ c.onboarding.step6Body }}</span>
           </p>
           <div class="step-cta">
             <button class="btn primary" [disabled]="finishing()" (click)="finishSetup()">
@@ -204,8 +222,10 @@ export class OnboardingComponent implements OnInit {
   integrations = signal<Integration[]>([]);
   evidence = signal<Evidence[]>([]);
   summary = signal<DashboardSummary | null>(null);
+  org = signal<Organization | null>(null);
   finishing = signal(false);
 
+  hasComplianceProgram = computed(() => !!this.org()?.servicesProvided?.trim());
   hasIntegration = computed(() => this.integrations().length > 0);
   hasEvidence    = computed(() => this.evidence().length > 0);
   evidenceCount  = computed(() => this.evidence().length);
@@ -222,13 +242,14 @@ export class OnboardingComponent implements OnInit {
   completedCount = computed(() => {
     let n = 0;
     if (this.framework())     n++;
+    if (this.hasComplianceProgram()) n++;
     if (this.hasIntegration()) n++;
     if (this.hasEvidence())   n++;
     if (this.hasMappings())   n++;
     if (this.hasCoverage())   n++;
     return n;
   });
-  progressPct = computed(() => Math.round(this.completedCount() * 20));
+  progressPct = computed(() => Math.round(this.completedCount() * 100 / 6));
 
   ngOnInit(): void {
     forkJoin({
@@ -236,11 +257,13 @@ export class OnboardingComponent implements OnInit {
       i: this.api.integrations(),
       e: this.api.evidence(),
       s: this.api.summary(),
-    }).subscribe(({ fw, i, e, s }) => {
+      org: this.api.organization(),
+    }).subscribe(({ fw, i, e, s, org }) => {
       this.framework.set(fw[0] ?? null);
       this.integrations.set(i);
       this.evidence.set(e);
       this.summary.set(s);
+      this.org.set(org);
     });
   }
 

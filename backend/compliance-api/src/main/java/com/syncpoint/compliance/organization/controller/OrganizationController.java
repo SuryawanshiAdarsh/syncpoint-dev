@@ -3,6 +3,7 @@ package com.syncpoint.compliance.organization.controller;
 import com.syncpoint.compliance.organization.dto.AddMemberRequest;
 import com.syncpoint.compliance.organization.dto.MemberResponse;
 import com.syncpoint.compliance.organization.dto.OrganizationResponse;
+import com.syncpoint.compliance.organization.dto.UpdateComplianceProgramRequest;
 import com.syncpoint.compliance.organization.dto.UpdateMemberRoleRequest;
 import com.syncpoint.compliance.organization.dto.UpdateOrganizationRequest;
 import com.syncpoint.compliance.organization.service.OrganizationService;
@@ -51,6 +52,20 @@ public class OrganizationController {
     @PostMapping("/onboarding/complete")
     public ResponseEntity<OrganizationResponse> completeOnboarding() {
         return ResponseEntity.ok(organizationService.completeOnboarding());
+    }
+
+    @PatchMapping("/compliance-program")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<OrganizationResponse> updateComplianceProgram(
+            @RequestBody UpdateComplianceProgramRequest req) {
+        return ResponseEntity.ok(organizationService.updateComplianceProgram(req));
+    }
+
+    @PostMapping("/system-description/generate")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public ResponseEntity<Void> generateSystemDescription() {
+        organizationService.generateSystemDescriptionDocument();
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/members")
