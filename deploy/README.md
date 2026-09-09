@@ -24,6 +24,13 @@ Only requires **Docker Desktop 24+** or **Docker Engine 24+** with Compose v2
 # 1. Configure
 cp .env.example .env
 
+# 1a. Generate a required secret-store master key and put it in .env
+#     (macOS/Linux): openssl rand -base64 32
+#     (Windows PowerShell): [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+#     Paste the output as SECRET_STORE_MASTER_KEY= in .env -- the backend will refuse to start
+#     without it (this deployment sets SECRET_STORE_REQUIRE_MASTER_KEY=true on purpose, so a
+#     stored integration credential can never silently vanish on a restart).
+
 # 2. Pull and start everything
 docker compose -f docker-compose.hub.yml up -d
 
@@ -110,12 +117,19 @@ clean install.
 ## Security notes (do not skip in real deployments)
 
 The `.env.example` bundled here is deliberately weak so the demo runs with zero
-setup. Before exposing this to real users, at minimum:
+setup, except for `SECRET_STORE_MASTER_KEY` -- that one is enforced at startup
+(`SECRET_STORE_REQUIRE_MASTER_KEY=true` in `docker-compose.hub.yml`) and the
+backend will fail to boot without it, on purpose. Before exposing this to real
+users, at minimum:
 
 - Set a real `JWT_SECRET` (32+ random bytes)
-- Set a real `SECRET_STORE_MASTER_KEY` (base64 of 32 random bytes)
 - Change all `change-me` passwords
 - Tighten `CORS_ALLOWED_ORIGINS` to the real frontend host
+
+Rotating `SECRET_STORE_MASTER_KEY` after it's in use re-encrypts nothing
+automatically -- every previously-stored integration credential becomes
+unreadable and each integration must be reconnected. Treat it as a one-time
+setup value, not something to change casually.
 
 The application does not put itself behind TLS — front it with a reverse proxy
 (nginx/Caddy/Cloudflare) that terminates HTTPS.

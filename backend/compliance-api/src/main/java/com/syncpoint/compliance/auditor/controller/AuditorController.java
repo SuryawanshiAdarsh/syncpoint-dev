@@ -75,6 +75,16 @@ public class AuditorController {
         return ResponseEntity.ok(service.riskRegister());
     }
 
+    @GetMapping("/risk-register/download")
+    public ResponseEntity<ByteArrayResource> downloadRiskAssessment() {
+        byte[] bytes = service.riskAssessmentReport();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/plain;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"soc2-risk-assessment.txt\"")
+                .contentLength(bytes.length)
+                .body(new ByteArrayResource(bytes));
+    }
+
     @GetMapping("/control-exceptions")
     public ResponseEntity<List<ControlExceptionResponse>> controlExceptions() {
         return ResponseEntity.ok(service.controlExceptions());

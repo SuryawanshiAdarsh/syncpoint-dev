@@ -43,6 +43,7 @@ import com.syncpoint.compliance.policy.dto.PolicyResponse;
 import com.syncpoint.compliance.policy.entity.PolicyStatus;
 import com.syncpoint.compliance.policy.service.PolicyService;
 import com.syncpoint.compliance.risk.dto.RiskResponse;
+import com.syncpoint.compliance.risk.service.RiskReportService;
 import com.syncpoint.compliance.risk.service.RiskService;
 import com.syncpoint.compliance.storage.ObjectStorageService;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,6 +79,7 @@ public class AuditorService {
     private final ControlExceptionService controlExceptionService;
     private final PolicyService policyService;
     private final ReadinessReportService readinessReportService;
+    private final RiskReportService riskReportService;
     private final ControlRepository controlRepo;
     private final UserRepository userRepo;
     private final AuditorRequestRepository requestRepo;
@@ -98,6 +100,7 @@ public class AuditorService {
                           ControlExceptionService controlExceptionService,
                           PolicyService policyService,
                           ReadinessReportService readinessReportService,
+                          RiskReportService riskReportService,
                           ControlRepository controlRepo,
                           UserRepository userRepo,
                           AuditorRequestRepository requestRepo,
@@ -117,6 +120,7 @@ public class AuditorService {
         this.controlExceptionService = controlExceptionService;
         this.policyService = policyService;
         this.readinessReportService = readinessReportService;
+        this.riskReportService = riskReportService;
         this.controlRepo = controlRepo;
         this.userRepo = userRepo;
         this.requestRepo = requestRepo;
@@ -170,6 +174,10 @@ public class AuditorService {
 
     public List<RiskResponse> riskRegister() {
         return riskService.list();
+    }
+
+    public byte[] riskAssessmentReport() {
+        return riskReportService.generate();
     }
 
     public List<ControlExceptionResponse> controlExceptions() {

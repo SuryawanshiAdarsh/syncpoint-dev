@@ -912,6 +912,8 @@ export const CAPTIONS = {
     statusMitigating: 'Mitigating',
     statusMitigated: 'Mitigated',
     statusAccepted: 'Accepted',
+    downloadReportButton: 'Download risk assessment',
+    downloadingButton: 'Downloading\u2026',
   },
 
   riskDetail: {

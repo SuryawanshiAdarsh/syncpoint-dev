@@ -225,6 +225,9 @@ export class ApiService {
   deleteRisk(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/risks/${id}`);
   }
+  riskAssessmentReportBlob(): Observable<Blob> {
+    return this.http.get(`${this.base}/risks/export/download`, { responseType: 'blob' });
+  }
 
   // Control exceptions/deviations (SOC 2 Type II — proof a control failed and was remediated)
   controlExceptions(controlId: string): Observable<ControlException[]> {
@@ -346,6 +349,9 @@ export class ApiService {
   }
   auditorRiskRegister(): Observable<Risk[]> {
     return this.http.get<Risk[]>(`${this.base}/auditor/risk-register`);
+  }
+  auditorRiskAssessmentReportBlob(): Observable<Blob> {
+    return this.http.get(`${this.base}/auditor/risk-register/download`, { responseType: 'blob' });
   }
   auditorControlExceptions(): Observable<ControlException[]> {
     return this.http.get<ControlException[]>(`${this.base}/auditor/control-exceptions`);

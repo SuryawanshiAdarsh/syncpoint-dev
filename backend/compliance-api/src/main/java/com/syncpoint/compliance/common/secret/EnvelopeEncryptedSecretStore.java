@@ -48,6 +48,12 @@ public class EnvelopeEncryptedSecretStore implements SecretStore {
     @PostConstruct
     void init() {
         if (!properties.hasMasterKey()) {
+            if (properties.requireMasterKey()) {
+                throw new IllegalStateException(
+                        "SECRET_STORE_MASTER_KEY is required in this deployment (SECRET_STORE_REQUIRE_MASTER_KEY=true) "
+                                + "but was not set. Generate one with: openssl rand -base64 32 -- and set it as an "
+                                + "env var before starting this container. See deploy/README.md.");
+            }
             log.warn("SECRET_STORE_MASTER_KEY not set. Generating an ephemeral in-memory master key. "
                     + "Stored secrets WILL NOT survive application restart. This is DEV-ONLY.");
             byte[] bytes = new byte[32];

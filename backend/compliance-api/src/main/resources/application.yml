@@ -60,6 +60,7 @@ syncpoint:
     bucket: ${S3_BUCKET:evidence}
   secrets:
     master-key: ${SECRET_STORE_MASTER_KEY:}
+    require-master-key: ${SECRET_STORE_REQUIRE_MASTER_KEY:false}
   ai:
     base-url: ${AI_SERVICE_URL:http://localhost:8000}
     enabled: ${AI_SERVICE_ENABLED:true}

@@ -55,6 +55,9 @@ const PAGE_SIZE = 10;
         [eyebrow]="c.riskRegister.eyebrow"
         [title]="c.riskRegister.title"
         [subtitle]="c.riskRegister.subtitle">
+        <ui-button variant="ghost" [loading]="downloadingReport()" [loadingText]="c.riskRegister.downloadingButton" (click)="downloadReport()">
+          {{ c.riskRegister.downloadReportButton }}
+        </ui-button>
       </ui-page-header>
 
       <ui-card *ngIf="canManage()" [title]="c.riskRegister.createCardTitle"
@@ -155,6 +158,7 @@ export class RiskRegisterComponent implements OnInit {
   saving = signal(false);
   formError = signal<string | null>(null);
   msg = signal<string | null>(null);
+  downloadingReport = signal(false);
 
   formTitle = '';
   formDescription = '';
@@ -180,6 +184,21 @@ export class RiskRegisterComponent implements OnInit {
 
   private reload(): void {
     this.api.risks().subscribe(list => this.risks.set(list));
+  }
+
+  downloadReport(): void {
+    this.downloadingReport.set(true);
+    this.api.riskAssessmentReportBlob().subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'soc2-risk-assessment.txt';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      complete: () => this.downloadingReport.set(false),
+    });
   }
 
   categoryLabel(cat: RiskCategory): string {
