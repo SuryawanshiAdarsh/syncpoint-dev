@@ -53,6 +53,13 @@ public class EmailService {
                         + "Review and acknowledge it here: " + portalLink);
     }
 
+    public void sendAuditorRequestEmail(String to, String controlCode, String message, String link) {
+        send(to, "Your auditor requested something on " + controlCode,
+                "Your auditor is reviewing " + controlCode + " and left this request:\n\n"
+                        + message + "\n\n"
+                        + "Respond here: " + link);
+    }
+
     private void send(String to, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();

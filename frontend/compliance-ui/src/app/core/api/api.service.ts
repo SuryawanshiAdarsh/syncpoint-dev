@@ -10,7 +10,8 @@ import {
   AdminOrganizationSummary, AdminOrganizationDetail, UpdateSubscriptionRequest, SubscriptionResponse,
   CreateSubscriptionRequestBody, SubscriptionRequestResponse, AdminSubscriptionRequestResponse,
   Risk, RiskStatus, CreateRiskRequest, UpdateRiskRequest,
-  ControlException, CreateControlExceptionRequest
+  ControlException, CreateControlExceptionRequest,
+  AuditorOverview, AuditorRequestItem, CreateAuditorRequestBody, AuditorControlReviewItem
 } from './api.types';
 
 @Injectable({ providedIn: 'root' })
@@ -189,6 +190,9 @@ export class ApiService {
   generateSystemDescription(): Observable<void> {
     return this.http.post<void>(`${this.base}/organizations/current/system-description/generate`, {});
   }
+  updateAuditorInfo(body: { auditorFirmName?: string | null; auditorContactName?: string | null; auditorContactEmail?: string | null }): Observable<Organization> {
+    return this.http.patch<Organization>(`${this.base}/organizations/current/auditor-info`, body);
+  }
   readinessReportBlob(): Observable<Blob> {
     return this.http.get(`${this.base}/readiness-report/download`, { responseType: 'blob' });
   }
@@ -235,11 +239,26 @@ export class ApiService {
   deleteControlException(controlId: string, exceptionId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/controls/${controlId}/exceptions/${exceptionId}`);
   }
-  addMember(body: { email: string; name: string; role: string }): Observable<Member> {
+  addMember(body: { email: string; name: string; role: string; accessExpiresAt?: string | null }): Observable<Member> {
     return this.http.post<Member>(`${this.base}/organizations/current/members`, body);
   }
   updateMemberRole(memberId: string, role: string): Observable<Member> {
     return this.http.patch<Member>(`${this.base}/organizations/current/members/${memberId}`, { role });
+  }
+  revokeMember(memberId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/organizations/current/members/${memberId}`);
+  }
+  orgAuditorRequests(): Observable<AuditorRequestItem[]> {
+    return this.http.get<AuditorRequestItem[]>(`${this.base}/organizations/current/auditor-requests`);
+  }
+  resolveAuditorRequest(id: string, resolutionNote?: string): Observable<AuditorRequestItem> {
+    return this.http.post<AuditorRequestItem>(`${this.base}/organizations/current/auditor-requests/${id}/resolve`, { resolutionNote });
+  }
+  controlAuditorRequests(controlId: string): Observable<AuditorRequestItem[]> {
+    return this.http.get<AuditorRequestItem[]>(`${this.base}/controls/${controlId}/auditor-requests`);
+  }
+  controlAuditorReviews(controlId: string): Observable<AuditorControlReviewItem[]> {
+    return this.http.get<AuditorControlReviewItem[]>(`${this.base}/controls/${controlId}/auditor-reviews`);
   }
   subscription(): Observable<SubscriptionResponse> {
     return this.http.get<SubscriptionResponse>(`${this.base}/organizations/current/subscription`);
@@ -307,5 +326,46 @@ export class ApiService {
   }
   rejectSubscriptionRequest(id: string, reviewNote?: string): Observable<AdminSubscriptionRequestResponse> {
     return this.http.post<AdminSubscriptionRequestResponse>(`${this.base}/admin/subscription-requests/${id}/reject`, { reviewNote });
+  }
+
+  // Auditor workspace (Role.AUDITOR real-login, restricted server-side to this prefix)
+  auditorOverview(): Observable<AuditorOverview> {
+    return this.http.get<AuditorOverview>(`${this.base}/auditor/overview`);
+  }
+  auditorControls(): Observable<Control[]> {
+    return this.http.get<Control[]>(`${this.base}/auditor/controls`);
+  }
+  auditorControl(id: string): Observable<Control> {
+    return this.http.get<Control>(`${this.base}/auditor/controls/${id}`);
+  }
+  auditorControlEvidence(id: string): Observable<Evidence[]> {
+    return this.http.get<Evidence[]>(`${this.base}/auditor/controls/${id}/evidence`);
+  }
+  auditorEvidenceDownloadBlob(evidenceId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/auditor/evidence/${evidenceId}/download`, { responseType: 'blob' });
+  }
+  auditorRiskRegister(): Observable<Risk[]> {
+    return this.http.get<Risk[]>(`${this.base}/auditor/risk-register`);
+  }
+  auditorControlExceptions(): Observable<ControlException[]> {
+    return this.http.get<ControlException[]>(`${this.base}/auditor/control-exceptions`);
+  }
+  auditorPolicies(): Observable<Policy[]> {
+    return this.http.get<Policy[]>(`${this.base}/auditor/policies`);
+  }
+  auditorReadinessReportBlob(): Observable<Blob> {
+    return this.http.get(`${this.base}/auditor/readiness-report`, { responseType: 'blob' });
+  }
+  auditorMyRequests(): Observable<AuditorRequestItem[]> {
+    return this.http.get<AuditorRequestItem[]>(`${this.base}/auditor/requests`);
+  }
+  auditorCreateRequest(controlId: string, body: CreateAuditorRequestBody): Observable<AuditorRequestItem> {
+    return this.http.post<AuditorRequestItem>(`${this.base}/auditor/controls/${controlId}/requests`, body);
+  }
+  auditorControlReviews(controlId: string): Observable<AuditorControlReviewItem[]> {
+    return this.http.get<AuditorControlReviewItem[]>(`${this.base}/auditor/controls/${controlId}/reviews`);
+  }
+  auditorMarkReviewed(controlId: string, note?: string): Observable<AuditorControlReviewItem> {
+    return this.http.post<AuditorControlReviewItem>(`${this.base}/auditor/controls/${controlId}/mark-reviewed`, { note });
   }
 }

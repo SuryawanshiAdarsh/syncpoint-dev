@@ -74,6 +74,15 @@ public class Organization {
     @Column(name = "significant_changes_during_period", columnDefinition = "text")
     private String significantChangesDuringPeriod;
 
+    @Column(name = "auditor_firm_name")
+    private String auditorFirmName;
+
+    @Column(name = "auditor_contact_name")
+    private String auditorContactName;
+
+    @Column(name = "auditor_contact_email")
+    private String auditorContactEmail;
+
     public Organization() {
     }
 
@@ -132,6 +141,12 @@ public class Organization {
     public void setComplementaryUserEntityControls(String complementaryUserEntityControls) { this.complementaryUserEntityControls = complementaryUserEntityControls; }
     public String getSignificantChangesDuringPeriod() { return significantChangesDuringPeriod; }
     public void setSignificantChangesDuringPeriod(String significantChangesDuringPeriod) { this.significantChangesDuringPeriod = significantChangesDuringPeriod; }
+    public String getAuditorFirmName() { return auditorFirmName; }
+    public void setAuditorFirmName(String auditorFirmName) { this.auditorFirmName = auditorFirmName; }
+    public String getAuditorContactName() { return auditorContactName; }
+    public void setAuditorContactName(String auditorContactName) { this.auditorContactName = auditorContactName; }
+    public String getAuditorContactEmail() { return auditorContactEmail; }
+    public void setAuditorContactEmail(String auditorContactEmail) { this.auditorContactEmail = auditorContactEmail; }
 
     @Override
     public boolean equals(Object o) {

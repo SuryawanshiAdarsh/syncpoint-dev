@@ -2,6 +2,9 @@ package com.syncpoint.compliance.compliance.controller;
 
 import com.syncpoint.compliance.ai.dto.AiAnalysisSummaryResponse;
 import com.syncpoint.compliance.ai.service.AiAnalysisService;
+import com.syncpoint.compliance.auditor.dto.AuditorControlReviewResponse;
+import com.syncpoint.compliance.auditor.dto.AuditorRequestResponse;
+import com.syncpoint.compliance.auditor.service.AuditorService;
 import com.syncpoint.compliance.common.tenant.TenantContext;
 import com.syncpoint.compliance.compliance.dto.AssignControlOwnerRequest;
 import com.syncpoint.compliance.compliance.dto.ControlResponse;
@@ -34,15 +37,18 @@ public class ControlController {
     private final EvidenceControlMappingRepository mappings;
     private final EvidenceService evidenceService;
     private final AiAnalysisService aiAnalysisService;
+    private final AuditorService auditorService;
 
     public ControlController(ComplianceService complianceService,
                              EvidenceControlMappingRepository mappings,
                              EvidenceService evidenceService,
-                             AiAnalysisService aiAnalysisService) {
+                             AiAnalysisService aiAnalysisService,
+                             AuditorService auditorService) {
         this.complianceService = complianceService;
         this.mappings = mappings;
         this.evidenceService = evidenceService;
         this.aiAnalysisService = aiAnalysisService;
+        this.auditorService = auditorService;
     }
 
     @GetMapping
@@ -109,5 +115,17 @@ public class ControlController {
     @GetMapping("/{id}/ai-analyses")
     public ResponseEntity<List<AiAnalysisSummaryResponse>> aiAnalyses(@PathVariable UUID id) {
         return ResponseEntity.ok(aiAnalysisService.listForControl(id));
+    }
+
+    /** Auditor evidence-requests/review-notes raised against this control — feeds a Control Detail panel. */
+    @GetMapping("/{id}/auditor-requests")
+    public ResponseEntity<List<AuditorRequestResponse>> auditorRequests(@PathVariable UUID id) {
+        return ResponseEntity.ok(auditorService.listRequestsForControl(id));
+    }
+
+    /** The auditor's own record of having tested/sampled this control. */
+    @GetMapping("/{id}/auditor-reviews")
+    public ResponseEntity<List<AuditorControlReviewResponse>> auditorReviews(@PathVariable UUID id) {
+        return ResponseEntity.ok(auditorService.controlReviews(id));
     }
 }

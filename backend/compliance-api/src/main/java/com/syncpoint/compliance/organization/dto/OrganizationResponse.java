@@ -24,6 +24,9 @@ public record OrganizationResponse(
         String componentsDescription,
         String subserviceOrganizations,
         String complementaryUserEntityControls,
-        String significantChangesDuringPeriod
+        String significantChangesDuringPeriod,
+        String auditorFirmName,
+        String auditorContactName,
+        String auditorContactEmail
 ) {
 }

@@ -177,13 +177,38 @@ interface NavSection { title: string; items: NavItem[]; }
           </div>
         </div>
 
-        <ng-container *ngIf="me()?.role === 'ACKNOWLEDGER'; else fullNav">
+        <ng-container *ngIf="me()?.role === 'ACKNOWLEDGER'; else auditorOrFullNav">
           <div class="section-title">{{ c.shell.sidebarSectionGovernance }}</div>
           <a class="link" routerLink="/my-policies" routerLinkActive="active">
             <mat-icon>task_alt</mat-icon>
             <span class="link-label">{{ c.shell.navMyPolicies }}</span>
           </a>
         </ng-container>
+        <ng-template #auditorOrFullNav>
+          <ng-container *ngIf="me()?.role === 'AUDITOR'; else fullNav">
+            <div class="section-title">{{ c.shell.sidebarSectionAudit }}</div>
+            <a class="link" routerLink="/auditor" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}">
+              <mat-icon>insights</mat-icon>
+              <span class="link-label">{{ c.shell.navAuditorOverview }}</span>
+            </a>
+            <a class="link" routerLink="/auditor/controls" routerLinkActive="active">
+              <mat-icon>checklist</mat-icon>
+              <span class="link-label">{{ c.shell.navAuditorControls }}</span>
+            </a>
+            <a class="link" routerLink="/auditor/risk-register" routerLinkActive="active">
+              <mat-icon>report_problem</mat-icon>
+              <span class="link-label">{{ c.shell.navAuditorRiskRegister }}</span>
+            </a>
+            <a class="link" routerLink="/auditor/policies" routerLinkActive="active">
+              <mat-icon>gavel</mat-icon>
+              <span class="link-label">{{ c.shell.navAuditorPolicies }}</span>
+            </a>
+            <a class="link" routerLink="/auditor/exceptions" routerLinkActive="active">
+              <mat-icon>fact_check</mat-icon>
+              <span class="link-label">{{ c.shell.navAuditorExceptions }}</span>
+            </a>
+          </ng-container>
+        </ng-template>
         <ng-template #fullNav>
           <ng-container *ngFor="let section of sections">
             <div class="section-title">{{ section.title }}</div>
@@ -238,10 +263,10 @@ interface NavSection { title: string; items: NavItem[]; }
                   <div class="org">{{ m.organizationName }} · {{ m.role }}</div>
                 </div>
               </div>
-              <button mat-menu-item routerLink="/onboarding">
+              <button mat-menu-item routerLink="/onboarding" *ngIf="canManage()">
                 <mat-icon>rocket_launch</mat-icon><span>{{ c.common.restartOnboarding }}</span>
               </button>
-              <button mat-menu-item routerLink="/settings">
+              <button mat-menu-item routerLink="/settings" *ngIf="!isRestrictedRole()">
                 <mat-icon>settings</mat-icon><span>{{ c.common.settings }}</span>
               </button>
               <button mat-menu-item (click)="logout()">
@@ -270,6 +295,12 @@ export class ShellComponent implements OnInit {
     if (!m) return '';
     return m.name.split(/\s+/).map(s => s[0]).join('').slice(0, 2).toUpperCase();
   });
+
+  // Onboarding restarts/reconfigures org-wide setup -- OWNER/ADMIN only, same gate as Settings'
+  // own admin sections. ACKNOWLEDGER/AUDITOR are meant to see ONLY their own restricted workspace
+  // (see their nav comments below), so Settings itself is also hidden for them here.
+  canManage = computed(() => ['OWNER', 'ADMIN'].includes(this.me()?.role ?? ''));
+  isRestrictedRole = computed(() => ['ACKNOWLEDGER', 'AUDITOR'].includes(this.me()?.role ?? ''));
 
   readonly sections: NavSection[] = [
     { title: CAPTIONS.shell.sidebarSectionOverview, items: [

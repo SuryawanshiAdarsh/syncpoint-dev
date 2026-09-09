@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../core/api/api.service';
 import { CAPTIONS } from '@captions';
 import { MAPPING_TYPE } from '@constants';
-import { ControlMapping, AiAnalysisSummary, MappingType, Control, Member, ControlException } from '../../core/api/api.types';
+import { ControlMapping, AiAnalysisSummary, MappingType, Control, Member, ControlException, AuditorRequestItem, AuditorControlReviewItem } from '../../core/api/api.types';
 import {
   UiCardComponent,
   UiEmptyStateComponent,
@@ -294,6 +294,23 @@ import {
             </ui-empty-state>
           </ng-template>
         </ui-card>
+
+        <ui-card [title]="c.controlDetail.auditorActivityTitle" [caption]="c.controlDetail.auditorActivityCaption"
+                 style="display:block;margin-top: var(--space-4);" *ngIf="auditorRequests().length || auditorReviews().length">
+          <div class="exception-row" *ngFor="let r of auditorRequests()">
+            <div style="flex:1;">
+              <div class="desc">{{ r.message }}</div>
+              <div class="dates">{{ r.createdByName }} · {{ r.createdAt | date:'MMM d, y' }}</div>
+            </div>
+            <ui-badge [variant]="r.status === 'OPEN' ? 'warning' : 'success'">{{ r.status }}</ui-badge>
+          </div>
+          <div class="exception-row" *ngFor="let r of auditorReviews()">
+            <div style="flex:1;">
+              <div class="desc">{{ c.controlDetail.auditorReviewedPrefix }}{{ r.note ? ': ' + r.note : '' }}</div>
+              <div class="dates">{{ r.reviewedByName }} · {{ r.reviewedAt | date:'MMM d, y' }}</div>
+            </div>
+          </div>
+        </ui-card>
       </ng-container>
 
       <div *ngIf="msg() as m" class="toast" [class.error]="msgIsError()">
@@ -317,6 +334,8 @@ export class ControlDetailComponent implements OnInit {
   exceptionDescription = '';
   exceptionDetectedDate = '';
   loggingException = signal(false);
+  auditorRequests = signal<AuditorRequestItem[]>([]);
+  auditorReviews = signal<AuditorControlReviewItem[]>([]);
   busy = signal<Record<string, boolean>>({});
   msg = signal<string | null>(null);
   msgIsError = signal(false);
@@ -404,6 +423,8 @@ export class ControlDetailComponent implements OnInit {
     this.api.controlMappings(this.controlId).subscribe(m => this.mappings.set(m));
     this.api.controlAiAnalyses(this.controlId).subscribe(a => this.aiAnalyses.set(a));
     this.api.controlExceptions(this.controlId).subscribe(e => this.exceptions.set(e));
+    this.api.controlAuditorRequests(this.controlId).subscribe(r => this.auditorRequests.set(r));
+    this.api.controlAuditorReviews(this.controlId).subscribe(r => this.auditorReviews.set(r));
   }
 
   logException(): void {

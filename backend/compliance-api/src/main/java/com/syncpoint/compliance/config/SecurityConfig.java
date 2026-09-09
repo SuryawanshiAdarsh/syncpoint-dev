@@ -59,6 +59,14 @@ public class SecurityConfig {
             "/api/v1/my-policies/**"
     };
 
+    // AUDITOR is the invited-CPA-firm real login (see Role.java) restricted to exactly these
+    // endpoints -- everything else under /api/v1/** is blocked for that role below.
+    private static final String[] AUDITOR_ALLOWED_ENDPOINTS = {
+            "/api/v1/auth/me",
+            "/api/v1/auditor",
+            "/api/v1/auditor/**"
+    };
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
@@ -93,10 +101,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers(ACKNOWLEDGER_ALLOWED_ENDPOINTS).authenticated()
+                        .requestMatchers(AUDITOR_ALLOWED_ENDPOINTS).authenticated()
                         .requestMatchers("/api/v1/**")
                             .access(AuthorizationManagers.allOf(
                                     AuthenticatedAuthorizationManager.authenticated(),
-                                    AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("ACKNOWLEDGER"))))
+                                    AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("ACKNOWLEDGER")),
+                                    AuthorizationManagers.not(AuthorityAuthorizationManager.hasRole("AUDITOR"))))
                         .anyRequest().authenticated())
                 .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

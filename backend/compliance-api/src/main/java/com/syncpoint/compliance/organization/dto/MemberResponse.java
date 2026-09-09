@@ -11,6 +11,7 @@ public record MemberResponse(
         String email,
         String name,
         Role role,
-        Instant createdAt
+        Instant createdAt,
+        Instant accessExpiresAt
 ) {
 }

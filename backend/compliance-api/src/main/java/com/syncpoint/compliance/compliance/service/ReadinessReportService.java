@@ -2,6 +2,8 @@ package com.syncpoint.compliance.compliance.service;
 
 import com.syncpoint.compliance.common.exception.NotFoundException;
 import com.syncpoint.compliance.common.tenant.TenantContext;
+import com.syncpoint.compliance.auditor.entity.AuditorControlReview;
+import com.syncpoint.compliance.auditor.repository.AuditorControlReviewRepository;
 import com.syncpoint.compliance.compliance.dto.ControlExceptionResponse;
 import com.syncpoint.compliance.compliance.dto.ControlResponse;
 import com.syncpoint.compliance.evidence.entity.Evidence;
@@ -48,12 +50,14 @@ public class ReadinessReportService {
     private final EvidenceControlMappingRepository evidenceControlMappings;
     private final EvidenceRepository evidenceRepository;
     private final ControlExceptionService controlExceptionService;
+    private final AuditorControlReviewRepository auditorControlReviews;
 
     public ReadinessReportService(ComplianceService complianceService, OrganizationRepository organizations,
                                    RiskRepository risks, RiskControlLinkRepository riskControlLinks,
                                    EvidenceControlMappingRepository evidenceControlMappings,
                                    EvidenceRepository evidenceRepository,
-                                   ControlExceptionService controlExceptionService) {
+                                   ControlExceptionService controlExceptionService,
+                                   AuditorControlReviewRepository auditorControlReviews) {
         this.complianceService = complianceService;
         this.organizations = organizations;
         this.risks = risks;
@@ -61,6 +65,7 @@ public class ReadinessReportService {
         this.evidenceControlMappings = evidenceControlMappings;
         this.evidenceRepository = evidenceRepository;
         this.controlExceptionService = controlExceptionService;
+        this.auditorControlReviews = auditorControlReviews;
     }
 
     public byte[] generate() {
@@ -119,6 +124,7 @@ public class ReadinessReportService {
         if (isTypeII && org.getObservationPeriodStart() != null && org.getObservationPeriodEnd() != null) {
             appendObservationPeriodCoverage(sb, orgId, controls, org.getObservationPeriodStart(), org.getObservationPeriodEnd());
             appendExceptions(sb, org.getObservationPeriodStart(), org.getObservationPeriodEnd());
+            appendAuditorActivity(sb, orgId, org.getObservationPeriodStart(), org.getObservationPeriodEnd());
         }
 
         sb.append("GAPS REQUIRING ATTENTION (Missing + Needs Review)\n");
@@ -245,6 +251,36 @@ public class ReadinessReportService {
                         .append(e.detectedDate()).append(": ").append(e.description());
                 if (e.remediatedDate() != null) {
                     sb.append(" (remediated ").append(e.remediatedDate()).append(")");
+                }
+                sb.append('\n');
+            }
+            sb.append('\n');
+        }
+    }
+
+    /** Proof the invited auditor actually looked at controls during the engagement -- distinct
+     *  from exceptions/coverage, this is the auditor's OWN record of having tested something. */
+    private void appendAuditorActivity(StringBuilder sb, UUID orgId, LocalDate start, LocalDate end) {
+        List<AuditorControlReview> all = auditorControlReviews.findByOrganizationIdOrderByReviewedAtDesc(orgId).stream()
+                .filter(r -> {
+                    LocalDate d = r.getReviewedAt().atZone(ZoneOffset.UTC).toLocalDate();
+                    return !d.isBefore(start) && !d.isAfter(end);
+                })
+                .toList();
+
+        sb.append("AUDITOR ACTIVITY DURING THE OBSERVATION PERIOD\n");
+        sb.append("------------------------------------------------\n");
+        sb.append("Controls marked reviewed/tested by the auditor: ").append(all.size()).append('\n');
+        if (all.isEmpty()) {
+            sb.append("(no auditor review activity recorded for this period)\n\n");
+        } else {
+            Map<UUID, String> codesById = complianceService.listAllControls().stream()
+                    .collect(Collectors.toMap(ControlResponse::id, ControlResponse::code, (a, b) -> a));
+            for (AuditorControlReview r : all) {
+                sb.append("  - ").append(codesById.getOrDefault(r.getControlId(), "(control)"))
+                        .append(" \u2014 reviewed ").append(r.getReviewedAt());
+                if (r.getNote() != null && !r.getNote().isBlank()) {
+                    sb.append(": ").append(r.getNote());
                 }
                 sb.append('\n');
             }

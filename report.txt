@@ -1,0 +1,181 @@
+SOC 2 READINESS / GAP REPORT
+=============================
+Organization: Demo Corp
+Generated:    2026-09-09T08:43:44.775082382Z
+
+COMPLIANCE PROGRAM
+------------------
+Report type: Type II — operating effectiveness over a period
+Observation period: 2026-03-08 to 2026-09-08
+Target report date: 2026-10-23
+Trust Services Category scope: SECURITY, AVAILABILITY, CONFIDENTIALITY
+
+SYSTEM DESCRIPTION
+------------------
+Services provided:
+Demo Corp provides a SaaS platform that helps customers collect, map, and review SOC 2 compliance evidence, and generates audit-ready reports for their CPA firm.
+
+System boundaries:
+The system boundary includes the Demo Corp web application, API backend, and database, all hosted in a single AWS region (us-east-1). It excludes customer-owned infrastructure and any third-party systems Demo Corp integrates with (GitHub, AWS, Jira, Google Workspace) but does not operate.
+
+Components:
+Infrastructure: AWS (EC2, RDS Postgres, S3). Software: a Java/Spring Boot API, an Angular web application, and a Python AI microservice for evidence-to-control mapping suggestions. People: a 12-person engineering and security team. Procedures: documented change-management, incident-response, and access-review procedures (see Policies). Data: customer-uploaded evidence artifacts and compliance metadata, encrypted at rest and in transit.
+
+Subservice organizations:
+Amazon Web Services, Inc. (cloud infrastructure hosting) and GitHub, Inc. (source code hosting for customer-authorized integrations). Both maintain their own SOC 2 Type II reports, available on request.
+
+Complementary user-entity controls:
+Customers are responsible for: (1) maintaining the confidentiality of their own user credentials and API tokens configured in Demo Corp integrations; (2) promptly notifying Demo Corp of any suspected unauthorized access to their account; (3) configuring appropriate access roles for their own team members within the platform; and (4) reviewing and confirming AI-suggested evidence mappings rather than relying on them as final compliance determinations.
+
+Significant changes during the period:
+Migrated the risk register and control-exception tracking features to production during the observation period. No changes to the production AWS account structure, encryption approach, or access-control model occurred during this period.
+
+COVERAGE SUMMARY
+----------------
+Total controls in scope: 38
+Covered:      10
+Partial:      2
+Needs review: 5
+Missing:      21
+Overall readiness: 26%
+
+RISK ASSESSMENT SUMMARY
+------------------------
+Total risks identified: 8
+  IDENTIFIED: 4
+  MITIGATING: 2
+  MITIGATED:  1
+  ACCEPTED:   1
+High-severity risks (score >= 6) not yet mitigated or accepted: 3
+Risks with no mitigating control linked (auditor gap): 1
+  - Key-person dependency on the legacy billing export script (OPERATIONAL, score 4)
+
+TYPE II OBSERVATION PERIOD COVERAGE (2026-03-08 to 2026-09-08, 7 monthly periods)
+--------------------------------------------------------------------
+Auditors require evidence sampled throughout the entire period, not just a single snapshot.
+
+[INSUFFICIENT] A1.1 — Capacity Monitoring — 1 of 7 periods have evidence
+[INSUFFICIENT] A1.2 — Environmental Protections and Recovery Infrastructure — 1 of 7 periods have evidence
+[INSUFFICIENT] A1.3 — Recovery Plan Testing — 0 of 7 periods have evidence
+[INSUFFICIENT] C1.1 — Confidential Information Identification — 1 of 7 periods have evidence
+[INSUFFICIENT] C1.2 — Confidential Information Disposal — 0 of 7 periods have evidence
+[INSUFFICIENT] CC1.1 — Integrity and Ethical Values — 1 of 7 periods have evidence
+[INSUFFICIENT] CC1.2 — Board Independence and Oversight — 0 of 7 periods have evidence
+[INSUFFICIENT] CC1.3 — Organizational Structure and Reporting Lines — 0 of 7 periods have evidence
+[INSUFFICIENT] CC1.4 — Commitment to Competence — 0 of 7 periods have evidence
+[INSUFFICIENT] CC1.5 — Accountability for Internal Control — 0 of 7 periods have evidence
+[INSUFFICIENT] CC2.1 — Quality of Internal Information — 0 of 7 periods have evidence
+[INSUFFICIENT] CC2.2 — Internal Communication — 0 of 7 periods have evidence
+[INSUFFICIENT] CC2.3 — External Communication — 0 of 7 periods have evidence
+[INSUFFICIENT] CC3.1 — Objectives Clarity — 0 of 7 periods have evidence
+[INSUFFICIENT] CC3.2 — Risk Identification and Analysis — 0 of 7 periods have evidence
+[INSUFFICIENT] CC3.3 — Fraud Risk Consideration — 0 of 7 periods have evidence
+[INSUFFICIENT] CC3.4 — Change Impact Assessment — 0 of 7 periods have evidence
+[INSUFFICIENT] CC4.1 — Ongoing and Separate Evaluations — 0 of 7 periods have evidence
+[INSUFFICIENT] CC4.2 — Communication of Deficiencies — 0 of 7 periods have evidence
+[INSUFFICIENT] CC5.1 — Selection of Control Activities — 0 of 7 periods have evidence
+[INSUFFICIENT] CC5.2 — Technology General Controls — 0 of 7 periods have evidence
+[INSUFFICIENT] CC5.3 — Policies and Procedures — 1 of 7 periods have evidence
+[INSUFFICIENT] CC6.1 — Logical Access Security — 4 of 7 periods have evidence
+[INSUFFICIENT] CC6.2 — New Access Registration — 1 of 7 periods have evidence
+[INSUFFICIENT] CC6.3 — Access Role Modification and Review — 1 of 7 periods have evidence
+[INSUFFICIENT] CC6.4 — Physical Access Restriction — 0 of 7 periods have evidence
+[INSUFFICIENT] CC6.5 — Decommissioning of Assets — 0 of 7 periods have evidence
+[INSUFFICIENT] CC6.6 — External Threat Protection — 1 of 7 periods have evidence
+[INSUFFICIENT] CC6.7 — Restricted Data Transmission — 4 of 7 periods have evidence
+[INSUFFICIENT] CC6.8 — Malicious Software Prevention — 0 of 7 periods have evidence
+[INSUFFICIENT] CC7.1 — Detection and Monitoring — 1 of 7 periods have evidence
+[INSUFFICIENT] CC7.2 — System Anomaly Monitoring — 1 of 7 periods have evidence
+[INSUFFICIENT] CC7.3 — Security Event Evaluation — 1 of 7 periods have evidence
+[INSUFFICIENT] CC7.4 — Incident Response Execution — 1 of 7 periods have evidence
+[INSUFFICIENT] CC7.5 — Incident Recovery — 1 of 7 periods have evidence
+[INSUFFICIENT] CC8.1 — Change Management — 1 of 7 periods have evidence
+[INSUFFICIENT] CC9.1 — Business Disruption Risk Mitigation — 4 of 7 periods have evidence
+[INSUFFICIENT] CC9.2 — Vendor and Business Partner Risk Management — 0 of 7 periods have evidence
+
+Summary: 0 of 38 controls have evidence sampled across every period in the observation window.
+
+EXCEPTIONS DURING THE OBSERVATION PERIOD
+-----------------------------------------
+Total exceptions logged: 4
+Still open (not yet remediated): 1
+
+[REMEDIATED] CC6.3 — detected 2026-05-08: Quarterly access review for the billing service was completed 9 days after the scheduled deadline. (remediated 2026-05-17)
+[REMEDIATED] CC7.2 — detected 2026-06-08: The Q2 incident-response tabletop exercise was rescheduled and completed 3 weeks later than planned. (remediated 2026-06-29)
+[REMEDIATED] CC6.6 — detected 2026-08-08: One contractor account was found without MFA enabled during a spot-check; access was suspended and MFA enforced the same day. (remediated 2026-08-08)
+[OPEN] CC8.1 — detected 2026-08-19: A production hotfix was deployed via the emergency path without the standard peer-review approval during an active incident. Follow-up review not yet completed.
+
+AUDITOR ACTIVITY DURING THE OBSERVATION PERIOD
+------------------------------------------------
+Controls marked reviewed/tested by the auditor: 0
+(no auditor review activity recorded for this period)
+
+GAPS REQUIRING ATTENTION (Missing + Needs Review)
+--------------------------------------------------
+[NEEDS_REVIEW] A1.2 — Environmental Protections and Recovery Infrastructure — Owner: Unassigned
+[MISSING] A1.3 — Recovery Plan Testing — Owner: Unassigned
+[MISSING] C1.2 — Confidential Information Disposal — Owner: Unassigned
+[MISSING] CC1.2 — Board Independence and Oversight — Owner: Unassigned
+[MISSING] CC1.3 — Organizational Structure and Reporting Lines — Owner: Unassigned
+[MISSING] CC1.4 — Commitment to Competence — Owner: Unassigned
+[MISSING] CC1.5 — Accountability for Internal Control — Owner: Unassigned
+[MISSING] CC2.1 — Quality of Internal Information — Owner: Unassigned
+[MISSING] CC2.2 — Internal Communication — Owner: Unassigned
+[MISSING] CC2.3 — External Communication — Owner: Unassigned
+[MISSING] CC3.1 — Objectives Clarity — Owner: Unassigned
+[MISSING] CC3.2 — Risk Identification and Analysis — Owner: Unassigned
+[MISSING] CC3.3 — Fraud Risk Consideration — Owner: Unassigned
+[MISSING] CC3.4 — Change Impact Assessment — Owner: Unassigned
+[MISSING] CC4.1 — Ongoing and Separate Evaluations — Owner: Unassigned
+[MISSING] CC4.2 — Communication of Deficiencies — Owner: Unassigned
+[MISSING] CC5.1 — Selection of Control Activities — Owner: Unassigned
+[MISSING] CC5.2 — Technology General Controls — Owner: Unassigned
+[NEEDS_REVIEW] CC6.1 — Logical Access Security — Owner: Demo Reviewer
+[MISSING] CC6.4 — Physical Access Restriction — Owner: Unassigned
+[MISSING] CC6.5 — Decommissioning of Assets — Owner: Unassigned
+[MISSING] CC6.8 — Malicious Software Prevention — Owner: Unassigned
+[NEEDS_REVIEW] CC7.4 — Incident Response Execution — Owner: Unassigned
+[NEEDS_REVIEW] CC7.5 — Incident Recovery — Owner: Unassigned
+[NEEDS_REVIEW] CC8.1 — Change Management — Owner: Demo Owner
+[MISSING] CC9.2 — Vendor and Business Partner Risk Management — Owner: Unassigned
+
+FULL CONTROL LIST
+-----------------
+[COVERED] A1.1 — Capacity Monitoring (Availability) — Owner: Demo Reviewer
+[NEEDS_REVIEW] A1.2 — Environmental Protections and Recovery Infrastructure (Availability) — Owner: Unassigned
+[MISSING] A1.3 — Recovery Plan Testing (Availability) — Owner: Unassigned
+[COVERED] C1.1 — Confidential Information Identification (Confidentiality) — Owner: Demo Owner
+[MISSING] C1.2 — Confidential Information Disposal (Confidentiality) — Owner: Unassigned
+[COVERED] CC1.1 — Integrity and Ethical Values (Control Environment) — Owner: Unassigned
+[MISSING] CC1.2 — Board Independence and Oversight (Control Environment) — Owner: Unassigned
+[MISSING] CC1.3 — Organizational Structure and Reporting Lines (Control Environment) — Owner: Unassigned
+[MISSING] CC1.4 — Commitment to Competence (Control Environment) — Owner: Unassigned
+[MISSING] CC1.5 — Accountability for Internal Control (Control Environment) — Owner: Unassigned
+[MISSING] CC2.1 — Quality of Internal Information (Communication and Information) — Owner: Unassigned
+[MISSING] CC2.2 — Internal Communication (Communication and Information) — Owner: Unassigned
+[MISSING] CC2.3 — External Communication (Communication and Information) — Owner: Unassigned
+[MISSING] CC3.1 — Objectives Clarity (Risk Assessment) — Owner: Unassigned
+[MISSING] CC3.2 — Risk Identification and Analysis (Risk Assessment) — Owner: Unassigned
+[MISSING] CC3.3 — Fraud Risk Consideration (Risk Assessment) — Owner: Unassigned
+[MISSING] CC3.4 — Change Impact Assessment (Risk Assessment) — Owner: Unassigned
+[MISSING] CC4.1 — Ongoing and Separate Evaluations (Monitoring Activities) — Owner: Unassigned
+[MISSING] CC4.2 — Communication of Deficiencies (Monitoring Activities) — Owner: Unassigned
+[MISSING] CC5.1 — Selection of Control Activities (Control Activities) — Owner: Unassigned
+[MISSING] CC5.2 — Technology General Controls (Control Activities) — Owner: Unassigned
+[COVERED] CC5.3 — Policies and Procedures (Control Activities) — Owner: Unassigned
+[NEEDS_REVIEW] CC6.1 — Logical Access Security (Logical and Physical Access Controls) — Owner: Demo Reviewer
+[COVERED] CC6.2 — New Access Registration (Logical and Physical Access Controls) — Owner: Unassigned
+[COVERED] CC6.3 — Access Role Modification and Review (Logical and Physical Access Controls) — Owner: Demo Reviewer
+[MISSING] CC6.4 — Physical Access Restriction (Logical and Physical Access Controls) — Owner: Unassigned
+[MISSING] CC6.5 — Decommissioning of Assets (Logical and Physical Access Controls) — Owner: Unassigned
+[COVERED] CC6.6 — External Threat Protection (Logical and Physical Access Controls) — Owner: Demo Owner
+[PARTIAL] CC6.7 — Restricted Data Transmission (Logical and Physical Access Controls) — Owner: Unassigned
+[MISSING] CC6.8 — Malicious Software Prevention (Logical and Physical Access Controls) — Owner: Unassigned
+[COVERED] CC7.1 — Detection and Monitoring (System Operations) — Owner: Demo Reviewer
+[COVERED] CC7.2 — System Anomaly Monitoring (System Operations) — Owner: Demo Owner
+[COVERED] CC7.3 — Security Event Evaluation (System Operations) — Owner: Unassigned
+[NEEDS_REVIEW] CC7.4 — Incident Response Execution (System Operations) — Owner: Unassigned
+[NEEDS_REVIEW] CC7.5 — Incident Recovery (System Operations) — Owner: Unassigned
+[NEEDS_REVIEW] CC8.1 — Change Management (Change Management) — Owner: Demo Owner
+[PARTIAL] CC9.1 — Business Disruption Risk Mitigation (Risk Mitigation) — Owner: Demo Owner
+[MISSING] CC9.2 — Vendor and Business Partner Risk Management (Risk Mitigation) — Owner: Unassigned

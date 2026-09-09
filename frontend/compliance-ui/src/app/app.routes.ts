@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, publicGuard, onboardingGuard, platformAdminGuard, acknowledgerGuard } from './core/auth/auth.guard';
+import { authGuard, publicGuard, onboardingGuard, platformAdminGuard, acknowledgerGuard, auditorGuard, onboardingRestartGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -37,10 +37,16 @@ export const routes: Routes = [
   },
   {
     path: '',
-    canActivate: [authGuard, onboardingGuard, acknowledgerGuard],
+    canActivate: [authGuard, onboardingGuard, acknowledgerGuard, auditorGuard],
     loadComponent: () => import('./shared/shell/shell.component').then(m => m.ShellComponent),
     children: [
       { path: 'my-policies',  loadComponent: () => import('./features/my-policies/my-policies.component').then(m => m.MyPoliciesComponent) },
+      { path: 'auditor',      loadComponent: () => import('./features/auditor/auditor-overview.component').then(m => m.AuditorOverviewComponent) },
+      { path: 'auditor/controls', loadComponent: () => import('./features/auditor/auditor-controls.component').then(m => m.AuditorControlsComponent) },
+      { path: 'auditor/controls/:id', loadComponent: () => import('./features/auditor/auditor-control-detail.component').then(m => m.AuditorControlDetailComponent) },
+      { path: 'auditor/risk-register', loadComponent: () => import('./features/auditor/auditor-risk-register.component').then(m => m.AuditorRiskRegisterComponent) },
+      { path: 'auditor/policies', loadComponent: () => import('./features/auditor/auditor-policies.component').then(m => m.AuditorPoliciesComponent) },
+      { path: 'auditor/exceptions', loadComponent: () => import('./features/auditor/auditor-exceptions.component').then(m => m.AuditorExceptionsComponent) },
       { path: 'dashboard',    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'review-queue', loadComponent: () => import('./features/review-queue/review-queue.component').then(m => m.ReviewQueueComponent) },
       { path: 'controls',     loadComponent: () => import('./features/controls/controls.component').then(m => m.ControlsComponent) },
@@ -52,7 +58,7 @@ export const routes: Routes = [
       { path: 'risk-register/:id', loadComponent: () => import('./features/risk-register/risk-detail.component').then(m => m.RiskDetailComponent) },
       { path: 'integrations', loadComponent: () => import('./features/integrations/integrations.component').then(m => m.IntegrationsComponent) },
       { path: 'activity',     loadComponent: () => import('./features/activity/activity.component').then(m => m.ActivityComponent) },
-      { path: 'onboarding',   loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
+      { path: 'onboarding',   canActivate: [onboardingRestartGuard], loadComponent: () => import('./features/onboarding/onboarding.component').then(m => m.OnboardingComponent) },
       { path: 'ask',          loadComponent: () => import('./features/ask/ask.component').then(m => m.AskComponent) },
       { path: 'audit-package', loadComponent: () => import('./features/export/export.component').then(m => m.ExportComponent) },
       { path: 'audit-log',     loadComponent: () => import('./features/audit-log/audit-log.component').then(m => m.AuditLogComponent) },

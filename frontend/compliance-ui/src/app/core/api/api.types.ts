@@ -5,7 +5,7 @@ export interface TokenResponse {
   expiresIn: number;
 }
 
-export type Role = 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER' | 'ACKNOWLEDGER';
+export type Role = 'OWNER' | 'ADMIN' | 'REVIEWER' | 'VIEWER' | 'ACKNOWLEDGER' | 'AUDITOR';
 
 export interface Me {
   userId: string;
@@ -318,6 +318,9 @@ export interface Organization {
   subserviceOrganizations?: string;
   complementaryUserEntityControls?: string;
   significantChangesDuringPeriod?: string;
+  auditorFirmName?: string;
+  auditorContactName?: string;
+  auditorContactEmail?: string;
 }
 
 export interface Member {
@@ -327,6 +330,7 @@ export interface Member {
   name: string;
   role: Role;
   createdAt: string;
+  accessExpiresAt?: string;
 }
 
 export type RiskCategory = 'FRAUD' | 'OPERATIONAL' | 'TECHNOLOGY' | 'COMPLIANCE' | 'THIRD_PARTY' | 'FINANCIAL';
@@ -463,4 +467,50 @@ export interface ExportJob {
   startedAt?: string;
   completedAt?: string;
   createdAt: string;
+}
+
+// Auditor/CPA firm collaboration workflow
+export type AuditorRequestType = 'EVIDENCE_REQUEST' | 'REVIEW_NOTE';
+export type AuditorRequestStatus = 'OPEN' | 'RESOLVED';
+
+export interface AuditorRequestItem {
+  id: string;
+  controlId: string;
+  controlCode?: string;
+  controlTitle?: string;
+  type: AuditorRequestType;
+  message: string;
+  status: AuditorRequestStatus;
+  createdByName?: string;
+  createdAt: string;
+  resolvedByName?: string;
+  resolvedAt?: string;
+  resolutionNote?: string;
+}
+
+export interface CreateAuditorRequestBody {
+  type: AuditorRequestType;
+  message: string;
+}
+
+export interface AuditorControlReviewItem {
+  id: string;
+  controlId: string;
+  controlCode?: string;
+  reviewedByName?: string;
+  reviewedAt: string;
+  note?: string;
+}
+
+export interface AuditorOverview {
+  organizationName: string;
+  auditorFirmName?: string;
+  reportType: ReportType;
+  observationPeriodStart?: string;
+  observationPeriodEnd?: string;
+  targetReportDate?: string;
+  totalControls: number;
+  coveredCount: number;
+  coveragePercent: number;
+  openRequestCount: number;
 }

@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ApiService } from '../../core/api/api.service';
-import { Me, Organization, Member, Integration, Role, SubscriptionResponse, SubscriptionRequestResponse, SubscriptionPlan } from '../../core/api/api.types';
+import { Me, Organization, Member, Integration, Role, SubscriptionResponse, SubscriptionRequestResponse, SubscriptionPlan, AuditorRequestItem } from '../../core/api/api.types';
 import { CAPTIONS } from '@captions';
 import { subscriptionPlanLabel, subscriptionStatusLabel, subscriptionStatusBadgeVariant } from '@constants';
 import {
@@ -190,7 +190,12 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
                 <mat-option value="REVIEWER">Reviewer</mat-option>
                 <mat-option value="VIEWER">Viewer</mat-option>
                 <mat-option value="ACKNOWLEDGER">Acknowledger (policies only)</mat-option>
+                <mat-option value="AUDITOR">Auditor (external, read-only)</mat-option>
               </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" *ngIf="inviteRole === 'AUDITOR'">
+              <mat-label>{{ c.settings.inviteAccessExpiresLabel }}</mat-label>
+              <input matInput type="date" [(ngModel)]="inviteAccessExpiresAt">
             </mat-form-field>
             <ui-button variant="primary" [loading]="inviting()" [loadingText]="c.settings.invitingButton"
                        [disabled]="!inviteEmail || !inviteName"
@@ -203,6 +208,7 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
             <div class="who">
               <div class="name">{{ m.name }}</div>
               <div class="email">{{ m.email }}</div>
+              <div class="email" *ngIf="m.accessExpiresAt">{{ c.settings.memberAccessExpiresPrefix }}: {{ m.accessExpiresAt | date:'MMM d, y' }}</div>
             </div>
             <mat-form-field appearance="outline" style="width:150px;" subscriptSizing="dynamic" *ngIf="isOwner(); else roleBadge">
               <mat-select [ngModel]="m.role" (ngModelChange)="changeRole(m, $event)">
@@ -211,9 +217,14 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
                 <mat-option value="REVIEWER">Reviewer</mat-option>
                 <mat-option value="VIEWER">Viewer</mat-option>
                 <mat-option value="ACKNOWLEDGER">Acknowledger (policies only)</mat-option>
+                <mat-option value="AUDITOR">Auditor (external, read-only)</mat-option>
               </mat-select>
             </mat-form-field>
             <ng-template #roleBadge><ui-badge variant="info">{{ m.role }}</ui-badge></ng-template>
+            <ui-button *ngIf="canManage() && m.role !== 'OWNER'" variant="ghost" [loading]="revokingMemberId() === m.id"
+                       [loadingText]="c.settings.revokingAccessButton" (click)="revokeMember(m)">
+              {{ c.settings.revokeAccessButton }}
+            </ui-button>
           </div>
         </ui-card>
 
@@ -309,6 +320,48 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
             </ui-button>
           </div>
         </ui-card>
+
+        <ui-card [title]="c.settings.auditorInfoTitle" [caption]="c.settings.auditorInfoCaption" style="display:block;margin-top:var(--space-4);">
+          <div class="row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.auditorFirmNameLabel }}</mat-label>
+              <input matInput [(ngModel)]="auditorFirmName">
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.auditorContactNameLabel }}</mat-label>
+              <input matInput [(ngModel)]="auditorContactName">
+            </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ c.settings.auditorContactEmailLabel }}</mat-label>
+              <input matInput type="email" [(ngModel)]="auditorContactEmail">
+            </mat-form-field>
+            <ui-button variant="primary" [loading]="savingAuditorInfo()" [loadingText]="c.settings.savingButton" (click)="saveAuditorInfo()">
+              {{ c.settings.saveButton }}
+            </ui-button>
+          </div>
+        </ui-card>
+
+        <ui-card [title]="c.settings.auditorRequestsTitle" [caption]="c.settings.auditorRequestsCaption" style="display:block;margin-top:var(--space-4);">
+          <ng-container *ngIf="auditorRequests().length; else emptyAuditorRequests">
+            <div *ngFor="let r of auditorRequests()" class="member-row">
+              <div class="who">
+                <div class="name">{{ r.controlCode }} \u2014 {{ r.type === 'EVIDENCE_REQUEST' ? c.settings.requestTypeEvidenceRequest : c.settings.requestTypeReviewNote }}</div>
+                <div class="email">{{ r.message }}</div>
+                <div class="email" *ngIf="r.resolutionNote">{{ r.resolutionNote }}</div>
+              </div>
+              <ui-badge [variant]="r.status === 'OPEN' ? 'warning' : 'success'">
+                {{ r.status === 'OPEN' ? c.settings.requestStatusOpen : c.settings.requestStatusResolved }}
+              </ui-badge>
+              <ui-button *ngIf="r.status === 'OPEN' && canManage()" variant="ghost" [loading]="resolvingRequestId() === r.id"
+                         [loadingText]="c.settings.resolvingButton" (click)="resolveAuditorRequest(r)">
+                {{ c.settings.resolveButton }}
+              </ui-button>
+            </div>
+          </ng-container>
+          <ng-template #emptyAuditorRequests>
+            <ui-empty-state icon="forum" [title]="c.settings.auditorRequestsEmptyTitle" [description]="c.settings.auditorRequestsEmptyMessage"></ui-empty-state>
+          </ng-template>
+        </ui-card>
       </ng-container>
 
       <ng-template #restricted>
@@ -316,6 +369,7 @@ type ScheduleValue = 'MANUAL' | 'DAILY' | 'WEEKLY';
           <ui-empty-state icon="lock" [title]="c.settings.restrictedTitle" [description]="c.settings.restrictedMessage"></ui-empty-state>
         </ui-card>
       </ng-template>
+
 
       <ui-toast *ngIf="msg()" variant="success">{{ msg() }}</ui-toast>
       <ui-toast *ngIf="err()" variant="error">{{ err() }}</ui-toast>
@@ -357,10 +411,20 @@ export class SettingsComponent implements OnInit {
   generatingDoc = signal(false);
   downloadingReport = signal(false);
 
+  auditorFirmName = '';
+  auditorContactName = '';
+  auditorContactEmail = '';
+  savingAuditorInfo = signal(false);
+
+  auditorRequests = signal<AuditorRequestItem[]>([]);
+  resolvingRequestId = signal<string | null>(null);
+
   inviteName = '';
   inviteEmail = '';
   inviteRole: Role = 'REVIEWER';
+  inviteAccessExpiresAt = '';
   inviting = signal(false);
+  revokingMemberId = signal<string | null>(null);
 
   msg = signal<string | null>(null);
   err = signal<string | null>(null);
@@ -391,17 +455,32 @@ export class SettingsComponent implements OnInit {
 
   invite(): void {
     this.inviting.set(true);
+    // Date <input> only gives "YYYY-MM-DD" -- the backend expects a full ISO Instant, so anchor
+    // it to end-of-day UTC (the auditor keeps access through the whole selected calendar day).
+    const expiresAt = this.inviteRole === 'AUDITOR' && this.inviteAccessExpiresAt
+      ? `${this.inviteAccessExpiresAt}T23:59:59Z`
+      : null;
     this.api.addMember({
       email: this.inviteEmail, name: this.inviteName, role: this.inviteRole,
+      accessExpiresAt: expiresAt,
     }).subscribe({
       next: () => {
         this.msg.set(this.c.settings.memberAddedToast);
         this.err.set(null);
-        this.inviteName = ''; this.inviteEmail = ''; this.inviteRole = 'REVIEWER';
+        this.inviteName = ''; this.inviteEmail = ''; this.inviteRole = 'REVIEWER'; this.inviteAccessExpiresAt = '';
         this.reloadMembers();
       },
       error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
       complete: () => this.inviting.set(false),
+    });
+  }
+
+  revokeMember(member: Member): void {
+    this.revokingMemberId.set(member.id);
+    this.api.revokeMember(member.id).subscribe({
+      next: () => { this.msg.set(this.c.settings.memberRevokedToast); this.err.set(null); this.reloadMembers(); },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.revokingMemberId.set(null),
     });
   }
 
@@ -473,14 +552,49 @@ export class SettingsComponent implements OnInit {
       this.subserviceOrganizations = o.subserviceOrganizations ?? '';
       this.complementaryUserEntityControls = o.complementaryUserEntityControls ?? '';
       this.significantChangesDuringPeriod = o.significantChangesDuringPeriod ?? '';
+      this.auditorFirmName = o.auditorFirmName ?? '';
+      this.auditorContactName = o.auditorContactName ?? '';
+      this.auditorContactEmail = o.auditorContactEmail ?? '';
     });
     this.api.subscription().subscribe(s => this.subscription.set(s));
     this.api.subscriptionRequests().subscribe(reqs => this.latestRequest.set(reqs[0] ?? null));
     this.reloadMembers();
     this.reloadIntegrations();
+    this.reloadAuditorRequests();
   }
   private reloadMembers(): void { this.api.members().subscribe(list => this.members.set(list)); }
   private reloadIntegrations(): void { this.api.integrations().subscribe(list => this.integrations.set(list)); }
+  private reloadAuditorRequests(): void { this.api.orgAuditorRequests().subscribe(list => this.auditorRequests.set(list)); }
+
+  saveAuditorInfo(): void {
+    this.savingAuditorInfo.set(true);
+    this.api.updateAuditorInfo({
+      auditorFirmName: this.auditorFirmName.trim() || null,
+      auditorContactName: this.auditorContactName.trim() || null,
+      auditorContactEmail: this.auditorContactEmail.trim() || null,
+    }).subscribe({
+      next: (o) => {
+        this.org.set(o);
+        this.msg.set(this.c.settings.auditorInfoSavedToast);
+        this.err.set(null);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.savingAuditorInfo.set(false),
+    });
+  }
+
+  resolveAuditorRequest(request: AuditorRequestItem): void {
+    this.resolvingRequestId.set(request.id);
+    this.api.resolveAuditorRequest(request.id).subscribe({
+      next: (updated) => {
+        this.auditorRequests.set(this.auditorRequests().map(r => r.id === updated.id ? updated : r));
+        this.msg.set(this.c.settings.requestResolvedToast);
+        this.err.set(null);
+      },
+      error: (e) => this.err.set(e?.error?.message ?? this.c.settings.actionError),
+      complete: () => this.resolvingRequestId.set(null),
+    });
+  }
 
   saveProgram(): void {
     this.savingProgram.set(true);

@@ -20,6 +20,7 @@ import com.syncpoint.compliance.organization.dto.OrganizationResponse;
 import com.syncpoint.compliance.organization.dto.UpdateComplianceProgramRequest;
 import com.syncpoint.compliance.organization.dto.UpdateMemberRoleRequest;
 import com.syncpoint.compliance.organization.dto.UpdateOrganizationRequest;
+import com.syncpoint.compliance.organization.dto.UpdateAuditorInfoRequest;
 import com.syncpoint.compliance.organization.entity.Organization;
 import com.syncpoint.compliance.organization.entity.OrganizationMember;
 import com.syncpoint.compliance.organization.entity.ReportType;
@@ -145,6 +146,23 @@ public class OrganizationService {
     }
 
     @Transactional
+    public OrganizationResponse updateAuditorInfo(UpdateAuditorInfoRequest req) {
+        Organization org = getCurrentOrganization();
+        org.setAuditorFirmName(blankToNull(req.auditorFirmName()));
+        org.setAuditorContactName(blankToNull(req.auditorContactName()));
+        org.setAuditorContactEmail(blankToNull(req.auditorContactEmail()));
+        Organization saved = organizationRepository.save(org);
+        TenantContext.Principal actor = TenantContext.require();
+        auditService.record(saved.getId(), actor.userId(),
+                AuditEvents.AUDITOR_INFO_UPDATED, "organization", saved.getId());
+        return toResponse(saved);
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
+    }
+
+    @Transactional
     public OrganizationResponse completeOnboarding() {
         Organization org = getCurrentOrganization();
         if (!org.isOnboardingCompleted()) {
@@ -174,7 +192,8 @@ public class OrganizationService {
                             u == null ? null : u.getEmail(),
                             u == null ? null : u.getName(),
                             m.getRole(),
-                            m.getCreatedAt());
+                            m.getCreatedAt(),
+                            m.getAccessExpiresAt());
                 })
                 .toList();
     }
@@ -194,7 +213,8 @@ public class OrganizationService {
         if (memberRepository.existsByOrganizationIdAndUserId(orgId, user.getId())) {
             throw new ConflictException("User is already a member of the organization");
         }
-        OrganizationMember membership = memberRepository.save(new OrganizationMember(orgId, user.getId(), req.role()));
+        OrganizationMember membership = memberRepository.save(
+                new OrganizationMember(orgId, user.getId(), req.role(), req.accessExpiresAt()));
 
         auditService.record(orgId, TenantContext.require().userId(), AuditEvents.MEMBER_INVITED, "organization_member", membership.getId());
 
@@ -205,7 +225,7 @@ public class OrganizationService {
         }
 
         return new MemberResponse(membership.getId(), user.getId(), user.getEmail(), user.getName(),
-                membership.getRole(), membership.getCreatedAt());
+                membership.getRole(), membership.getCreatedAt(), membership.getAccessExpiresAt());
     }
 
     @Transactional
@@ -236,7 +256,23 @@ public class OrganizationService {
         return new MemberResponse(saved.getId(), saved.getUserId(),
                 user == null ? null : user.getEmail(),
                 user == null ? null : user.getName(),
-                saved.getRole(), saved.getCreatedAt());
+                saved.getRole(), saved.getCreatedAt(), saved.getAccessExpiresAt());
+    }
+
+    /** Immediately ends a member's access (e.g. an auditor engagement wrapping up) -- a hard
+     *  delete of the membership row, not a soft/status flag, matching the rest of this table's
+     *  "permanent once added" shape everywhere else membership is read. */
+    @Transactional
+    public void revokeMember(UUID memberId) {
+        TenantContext.Principal actor = TenantContext.require();
+        UUID orgId = actor.organizationId();
+        OrganizationMember member = memberRepository.findByIdAndOrganizationId(memberId, orgId)
+                .orElseThrow(() -> new NotFoundException("Member not found"));
+        if (member.getRole() == Role.OWNER) {
+            throw new ConflictException("Cannot revoke an OWNER's access");
+        }
+        memberRepository.delete(member);
+        auditService.record(orgId, actor.userId(), AuditEvents.AUDITOR_ACCESS_REVOKED, "organization_member", memberId);
     }
 
     private Organization getCurrentOrganization() {
@@ -256,6 +292,7 @@ public class OrganizationService {
                 scope, org.getReportType(), org.getObservationPeriodStart(), org.getObservationPeriodEnd(),
                 org.getTargetReportDate(), org.getServicesProvided(), org.getSystemBoundaries(),
                 org.getComponentsDescription(), org.getSubserviceOrganizations(),
-                org.getComplementaryUserEntityControls(), org.getSignificantChangesDuringPeriod());
+                org.getComplementaryUserEntityControls(), org.getSignificantChangesDuringPeriod(),
+                org.getAuditorFirmName(), org.getAuditorContactName(), org.getAuditorContactEmail());
     }
 }

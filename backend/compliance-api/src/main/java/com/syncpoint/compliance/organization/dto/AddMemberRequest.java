@@ -6,9 +6,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.Instant;
+
 public record AddMemberRequest(
         @Email @NotBlank String email,
         @NotBlank @Size(min = 1, max = 255) String name,
-        @NotNull Role role
+        @NotNull Role role,
+        Instant accessExpiresAt
 ) {
 }

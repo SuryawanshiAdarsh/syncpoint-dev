@@ -33,6 +33,10 @@ public class OrganizationMember {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /** Time-boxed access for engagement-scoped roles (e.g. AUDITOR); NULL = no expiry. */
+    @Column(name = "access_expires_at")
+    private Instant accessExpiresAt;
+
     public OrganizationMember() {
     }
 
@@ -40,6 +44,13 @@ public class OrganizationMember {
         this.organizationId = organizationId;
         this.userId = userId;
         this.role = role;
+    }
+
+    public OrganizationMember(UUID organizationId, UUID userId, Role role, Instant accessExpiresAt) {
+        this.organizationId = organizationId;
+        this.userId = userId;
+        this.role = role;
+        this.accessExpiresAt = accessExpiresAt;
     }
 
     @PrePersist
@@ -54,6 +65,8 @@ public class OrganizationMember {
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getAccessExpiresAt() { return accessExpiresAt; }
+    public void setAccessExpiresAt(Instant accessExpiresAt) { this.accessExpiresAt = accessExpiresAt; }
 
     @Override
     public boolean equals(Object o) {
