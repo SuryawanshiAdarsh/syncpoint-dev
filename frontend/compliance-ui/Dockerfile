@@ -15,4 +15,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/dist/compliance-ui/browser /usr/share/nginx/html
 EXPOSE 4200
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=10 \
-    CMD wget -q -O- http://localhost:4200/ >/dev/null || exit 1
+    CMD wget -q -O- http://127.0.0.1:4200/ >/dev/null || exit 1

@@ -218,7 +218,10 @@ public class OrganizationService {
 
         auditService.record(orgId, TenantContext.require().userId(), AuditEvents.MEMBER_INVITED, "organization_member", membership.getId());
 
-        if (isNewUser) {
+        // Resend the invite whenever this person hasn't actually completed setup yet -- not just
+        // for brand-new users. Otherwise re-adding a previously-removed member (or an existing
+        // user who never finished their first invite) silently sends nothing at all.
+        if (isNewUser || !user.isEmailVerified()) {
             Organization org = getCurrentOrganization();
             String token = authTokenService.issue(user.getId(), TokenPurpose.INVITE, Duration.ofDays(7));
             emailService.sendInviteEmail(user.getEmail(), org.getName(), frontendUrl + "/accept-invite?token=" + token);

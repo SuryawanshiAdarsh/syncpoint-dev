@@ -104,8 +104,15 @@ services:
       SECRET_STORE_MASTER_KEY: ${SECRET_STORE_MASTER_KEY:-}
       SECRET_STORE_REQUIRE_MASTER_KEY: "true"
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
+      # Defaults to Mailpit (nothing leaves the machine). Set these in .env with a real SMTP
+      # relay to actually deliver invite/reset/verify emails to a real inbox.
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@syncpoint.local}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4200}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/liveness || exit 1"]

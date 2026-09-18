@@ -18,6 +18,7 @@ Severity: **P1** blocks a core flow · **P2** visible/annoying but has a workaro
 | [BUG-009](#bug-009-password-reset-does-not-revoke-existing-refresh-tokenssessions) | Parked |
 | [BUG-010](#bug-010-no-check-against-known-breached-passwords) | Parked |
 | [BUG-011](#bug-011-anonymous-requests-passed-authorization-on-nearly-every-endpoint) | Fixed (2026-09-08) |
+| [BUG-012](#bug-012-invite-emails-silently-not-resent-and-localhost-links-get-stripped-by-real-mail-providers) | Partially fixed (2026-09-12) |
 
 ---
 
@@ -334,4 +335,65 @@ end-to-end after the fix).
 No test exercises an unauthenticated request against a real `@PreAuthorize`-free endpoint; the
 Angular app always attaches a bearer token via its HTTP interceptor, so the bug was invisible from
 normal UI usage. Only surfaced via a deliberate anonymous `fetch()` during manual verification.
+
+## BUG-012: Invite emails silently not resent, and localhost links get stripped by real mail providers
+
+- **Severity**: P1 — blocks the entire member/auditor invite flow whenever real SMTP delivery is
+  used instead of the local Mailpit catcher
+- **Area**: Backend — `OrganizationService.addMember()`, `EmailService`; infra — `FRONTEND_URL`
+- **Found**: 2026-09-12, while testing the Auditor Collaboration Workflow against a real Gmail SMTP
+  relay (previously only ever tested against Mailpit, which never exposed any of these three issues)
+
+### Symptom (three compounding issues found in one debugging pass)
+1. Re-inviting an email address that already had a `User` row (e.g., previously removed then
+   re-added as a member) silently sent **no email at all** — no error, a normal 201 response, but
+   nothing to click.
+2. Once that was fixed, the invite email arrived as plain text with a bare long URL — vulnerable to
+   MTA/line-wrap corruption (a soft line break landing inside the token silently breaks it).
+3. Once that was fixed (switched to HTML email with a real `<a href>`), the link **still didn't
+   appear at all** in the received email — because `FRONTEND_URL` is hardcoded to
+   `http://localhost:4200`, and real mail providers (Gmail confirmed) strip/neutralize links
+   pointing to localhost/private addresses as a spam precaution.
+
+### Root cause
+1. `OrganizationService.addMember()` only issued an invite token/email `if (isNewUser)` — an
+   existing-but-never-verified `User` row (email_verified_at still null) was treated the same as a
+   fully-onboarded member and got nothing.
+2. `EmailService` used `SimpleMailMessage` (plain text only) for every transactional email.
+3. `FRONTEND_URL` has no real-deployment value configured anywhere yet — it's `localhost` in both
+   `docker-compose.yml` and every env file, with no tunnel/public-URL story for testing real
+   external delivery.
+
+### Fix applied (2026-09-12) — issues 1 and 2 only
+```java
+// OrganizationService.addMember() — resend whenever setup was never completed, not just for new users
+if (isNewUser || !user.isEmailVerified()) {
+    ...
+    emailService.sendInviteEmail(...);
+}
+```
+```java
+// EmailService — multipart HTML (real <a href>) instead of SimpleMailMessage plain text
+MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+helper.setText(plainText, html);
+```
+Also fixed a related frontend bug found during the same investigation:
+`accept-invite.component.ts` treated *any* error (network blip, validation, server error) as
+"link expired" and permanently hid the retry form. Now only a genuine 401 does that; other errors
+show an inline message and let the user retry with the same token.
+
+### Still open — issue 3 (localhost links stripped by real providers)
+Not fixed. Needs an infrastructure decision, not just code:
+- **Option A**: tunnel local dev (`ngrok http 4200` or similar) and set `FRONTEND_URL` to the
+  public HTTPS URL for any real-external-delivery testing.
+- **Option B**: revert to Mailpit for day-to-day feature testing (proven reliable all session) and
+  only wire real SMTP + a real public `FRONTEND_URL` together, at the same time, when there's an
+  actual external user who needs a real email.
+Deliberately not doing either yet — needs a decision on which path, tracked here so it isn't lost.
+
+### Why not caught sooner
+Every invite/reset/verify flow this entire session was tested against Mailpit, which doesn't relay
+mail anywhere real — so it never exercises real MTA line-wrapping, never has a reason to reject a
+localhost link, and every test user was a brand-new `User` row (never hit the resend-path gap).
+All three only surface the moment a real external mailbox enters the picture.
 

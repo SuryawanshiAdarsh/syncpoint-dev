@@ -35,6 +35,7 @@ import { UiButtonComponent, UiCardComponent } from '@ui';
               <mat-label>{{ c.acceptInvite.passwordLabel }}</mat-label>
               <input matInput type="password" name="password" [(ngModel)]="password" required minlength="12" autocomplete="new-password">
             </mat-form-field>
+            <div class="invalid" *ngIf="submitError()">{{ submitError() }}</div>
             <div class="actions">
               <ui-button variant="primary" [loading]="loading()" [loadingText]="c.acceptInvite.submittingButton"
                          [disabled]="password.length < 12" type="submit" style="width:100%;">
@@ -62,6 +63,7 @@ export class AcceptInviteComponent implements OnInit {
   password = '';
   loading = signal(false);
   valid = signal(true);
+  submitError = signal<string | null>(null);
 
   ngOnInit(): void {
     this.token = this.route.snapshot.queryParamMap.get('token') ?? '';
@@ -70,12 +72,23 @@ export class AcceptInviteComponent implements OnInit {
 
   submit(): void {
     this.loading.set(true);
+    this.submitError.set(null);
     this.api.acceptInvite(this.token, this.password).subscribe({
       next: (t) => {
         this.store.setTokens(t.accessToken, t.refreshToken);
         this.router.navigateByUrl('/dashboard', { replaceUrl: true });
       },
-      error: () => { this.valid.set(false); this.loading.set(false); },
+      error: (e) => {
+        this.loading.set(false);
+        // Only a genuinely invalid/expired/already-used token (401) should hide the form for
+        // good -- any other failure (network blip, validation, server error) must let the user
+        // retry with the same token instead of silently locking them out with no way back.
+        if (e?.status === 401) {
+          this.valid.set(false);
+        } else {
+          this.submitError.set(e?.error?.message ?? this.c.acceptInvite.genericError);
+        }
+      },
     });
   }
 }

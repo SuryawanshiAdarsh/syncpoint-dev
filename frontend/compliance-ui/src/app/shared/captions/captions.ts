@@ -125,6 +125,7 @@ export const CAPTIONS = {
     submitButton: 'Set password & sign in',
     submittingButton: 'Setting up\u2026',
     invalidMessage: 'This invite link is invalid or has expired. Ask an admin to resend it.',
+    genericError: 'Could not complete that action. Try again.',
   },
 
   verifyEmail: {

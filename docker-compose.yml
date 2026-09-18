@@ -110,8 +110,15 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       AI_SERVICE_URL: http://ai-service:8000
       SECRET_STORE_MASTER_KEY: ${SECRET_STORE_MASTER_KEY:-}
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
+      # Defaults to Mailpit (local catcher, nothing leaves the machine). Override in .env with
+      # a real SMTP relay to actually deliver invite/reset/verify emails.
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-false}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@syncpoint.local}
       FRONTEND_URL: http://localhost:4200
     ports:
       - "8080:8080"
